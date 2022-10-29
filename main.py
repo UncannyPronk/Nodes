@@ -4,6 +4,7 @@ from pygame.locals import *
 from pygame import mixer
 from random import randint as rd
 
+
 pygame.init()
 sw, sy = pygame.display.Info().current_w, pygame.display.Info().current_h
 screen = pygame.display.set_mode((sw,sy))
