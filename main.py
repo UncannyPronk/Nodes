@@ -121,21 +121,14 @@ def node_graph():
             if event.type == MOUSEBUTTONUP:
                 node1.anchor = False
                 node2.anchor = False
-                print(0)
                 if node1.outrect[1]:
-                    print(1)
                     for rect in node2.inrects:
-                        print(rect[0].x, rect[0].y)
                         if rect[0].collidepoint(pygame.mouse.get_pos()):
-                            print(2)
                             connections.append([node1.outrect[0], rect[0]])
                             rect[1] = 1
                 if node2.outrect[1]:
-                    print(1.1)
                     for rect in node1.inrects:
-                        print(rect[0].x, rect[0].y)
                         if rect[0].collidepoint(pygame.mouse.get_pos()):
-                            print(2.1)
                             connections.append([node2.outrect[0], rect[0]])
                             rect[1] = 1
 
