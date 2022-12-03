@@ -17,10 +17,14 @@ def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fonts
     else:
         return text, position
 
+class Player:
+    def __init__(self, attributes=[]):
+        self.sprite = pygame.sprite.Sprite()
+
 class Node:
-    def __init__(self, x, no=3):
-        self.rect = Rect(x*300 + 20, 0, 200, 100)
-        self.name = "New Node"
+    def __init__(self, x, no=3, name="New Node"):
+        self.rect = Rect(x*300 + 20, 200, 200, 100)
+        self.name = name
         self.inputno = no
         if self.inputno > 3:
             self.inputno = 3
@@ -140,6 +144,8 @@ def node_graph():
         for node in connections:
             pygame.draw.line(screen, (255, 255, 255), node[0].center, node[1].center, 3)
             
+        pygame.draw.polygon(screen, (10, 255, 100), ((sw - 100, 30), (sw - 60, 50), (sw - 100, 70)))
+
         pygame.display.update()
         clock.tick(60)
 
@@ -164,4 +170,6 @@ def gameloop():
             clock.tick(60)
 
 if __name__ == "__main__":
+    #main menu
     node_graph()
+    #gameloop
