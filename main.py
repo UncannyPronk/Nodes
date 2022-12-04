@@ -5,9 +5,10 @@ from pygame import mixer
 from random import randint as rd
 
 pygame.init()
-sw, sy = pygame.display.Info().current_w, pygame.display.Info().current_h
-screen = pygame.display.set_mode((sw,sy))
+sw, sh = pygame.display.Info().current_w, pygame.display.Info().current_h
+screen = pygame.display.set_mode((sw, sh))
 clock = pygame.time.Clock()
+display = pygame.Surface([1000, 600])
 
 def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fontsize=20, font='arial'):
     font = pygame.font.SysFont(font, fontsize)
@@ -17,17 +18,30 @@ def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fonts
     else:
         return text, position
 
-class Player:
+class Player(pygame.sprite.Sprite):
     def __init__(self, attributes=[]):
-        self.sprite = pygame.sprite.Sprite()
-        self.orig_color = [0, 0, 0]
-        self.color = self.orig_color
+        super(Player, self).__init__()
+        self.spritesheet = pygame.image.load("player_img.png")
+        self.spritesheet = pygame.transform.scale(self.spritesheet, (512, 128))
+        self.image = pygame.Surface([64, 64])
+        self.image.blit(self.spritesheet, (0, 0), (0, 0, 64, 64))
+        self.image.set_colorkey((0, 255, 0))
+        self.rect = pygame.Rect(300, 336, 64, 64)
+        self.animationvar = 0
+        self.attributes = attributes
+        self.state = "walk"
     def reset(self):
-        self.color = self.orig_color
-    def display(self):
-        pygame.draw.rect(screen, self.color,(300, sy - 320, 60, 120))
-
-player = Player()
+        self.state = "idle"
+    def update(self):
+        self.animationvar += 0.2
+        if self.animationvar >= 8:
+            self.animationvar = 0
+        self.image.fill((0, 255, 0))
+        if self.state == "idle":
+            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0, 64, 64))
+        if self.state == "walk":
+            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 64, 64, 64))
+        self.image.set_colorkey((0, 255, 0))
 
 class Node:
     def __init__(self, x, no=3, name="New Node"):
@@ -88,10 +102,13 @@ class Node:
         return result
 
 nodes = []
-nodes.append(Node(4, 3, "Player"))
-nodes.append(Node(0, 1, "Color: Red"))
-nodes.append(Node(1, 1, "Color: Blue"))
+nodes.append(Node(3, 3, "Player"))
+nodes.append(Node(0, 1, "Walk"))
 connections = []
+
+player = Player()
+playergrp = pygame.sprite.Group()
+playergrp.add(player)
 
 def node_graph():
     running = True
@@ -187,18 +204,8 @@ def node_graph():
 def nodes_init(connections):
     for c in connections:
         if c[1][1] == "Player":
-            if c[1][0] == "Color: Red":
-                player.color = [255, 0, 0]
-                for c1 in connections:
-                    if c1[1][1] == "Color: Red":
-                        if c1[1][0] == "Color: Blue":
-                            player.color = [255, 0, 255]
-            if c[1][0] == "Color: Blue":
-                player.color = [0, 0, 255]
-                for c1 in connections:
-                    if c1[1][1] == "Color: Blue":
-                        if c1[1][0] == "Color: Red":
-                            player.color = [255, 0, 255]
+            if c[1][0] == "Walk":
+                player.state = "walk"
 
 def gameloop():
     running = True
@@ -218,12 +225,14 @@ def gameloop():
             if keys_pressed[K_SPACE]:
                 pass
 
-            screen.fill((10, 55, 120))
-            pygame.draw.rect(screen, (140, 100, 20), (0, sy - 200, sw, 200))
-            player.display()
+        display.fill((10, 55, 120))
+        pygame.draw.rect(display, (140, 100, 20), (0, 400, 1000, 200))
+        playergrp.draw(display)
+        playergrp.update()
 
-            pygame.display.update()
-            clock.tick(60)
+        screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
+        pygame.display.update()
+        clock.tick(60)
 
 if __name__ == "__main__":
     #main menu
