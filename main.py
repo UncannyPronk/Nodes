@@ -20,9 +20,12 @@ def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fonts
 class Player:
     def __init__(self, attributes=[]):
         self.sprite = pygame.sprite.Sprite()
-        self.color = (0, 100, 255)
+        self.orig_color = [0, 0, 0]
+        self.color = self.orig_color
+    def reset(self):
+        self.color = self.orig_color
     def display(self):
-        pygame.draw.rect(screen, self.color,(300, sy - 260, 30, 60))
+        pygame.draw.rect(screen, self.color,(300, sy - 320, 60, 120))
 
 player = Player()
 
@@ -85,8 +88,9 @@ class Node:
         return result
 
 nodes = []
-nodes.append(Node(0, 0, "Player"))
-nodes.append(Node(1, 1, "Color: Red"))
+nodes.append(Node(4, 3, "Player"))
+nodes.append(Node(0, 1, "Color: Red"))
+nodes.append(Node(1, 1, "Color: Blue"))
 connections = []
 
 def node_graph():
@@ -112,21 +116,21 @@ def node_graph():
                     running = False
                     pygame.quit()
                     sys.exit()
-                for node in nodes:
-                    if node.selected:
-                        if not node.editedname:
-                            node.name = ""
-                            node.editedname = True
-                        if event.key == K_DELETE:
-                            node.name = ""
-                        if event.key == K_BACKSPACE:
-                            node.name = node.name[:-1]
-                        elif event.key == K_MINUS:
-                            node.name += "_"
-                        elif event.key == K_SPACE:
-                            node.name += " "
-                        elif len(node.name) < 12:
-                            node.name += event.unicode
+                # for node in nodes:
+                #     if node.selected:
+                #         if not node.editedname:
+                #             node.name = ""
+                #             node.editedname = True
+                #         if event.key == K_DELETE:
+                #             node.name = ""
+                #         if event.key == K_BACKSPACE:
+                #             node.name = node.name[:-1]
+                #         elif event.key == K_MINUS:
+                #             node.name += "_"
+                #         elif event.key == K_SPACE:
+                #             node.name += " "
+                #         elif len(node.name) < 12:
+                #             node.name += event.unicode
             if event.type == MOUSEBUTTONDOWN:
                 if Rect(sw - 100, 30, 40, 40).collidepoint(event.pos):
                     gameloop()
@@ -137,6 +141,15 @@ def node_graph():
                             nodes[i].selected = not nodes[i].selected
                         else:
                             nodes[i].selected = False
+                    for connection in connections:
+                        for node1 in nodes:
+                            if node1.name == connection[1][0]:
+                                for node2 in nodes:
+                                    if node1 != node2:
+                                        if node2.name == connection[1][1]:
+                                            for rect in node2.inrects:
+                                                if rect[0].collidepoint(event.pos):
+                                                    connections.remove(connection)
             if event.type == MOUSEBUTTONUP:
                 if len(nodes) > 1:
                     for node1 in nodes:
@@ -148,6 +161,7 @@ def node_graph():
                                         if rect[0].collidepoint(pygame.mouse.get_pos()):
                                             connections.append([[node1.outrect[0], rect[0]], [node1.name, node2.name]])
                                             rect[1] = 1
+                        
                 else:
                     nodes[0].anchor = False
 
@@ -172,12 +186,23 @@ def node_graph():
 
 def nodes_init(connections):
     for c in connections:
-        if c[1][0] == "Player":
-            if c[1][1] == "Color: Red":
-                player.color = (255, 0, 0)
+        if c[1][1] == "Player":
+            if c[1][0] == "Color: Red":
+                player.color = [255, 0, 0]
+                for c1 in connections:
+                    if c1[1][1] == "Color: Red":
+                        if c1[1][0] == "Color: Blue":
+                            player.color = [255, 0, 255]
+            if c[1][0] == "Color: Blue":
+                player.color = [0, 0, 255]
+                for c1 in connections:
+                    if c1[1][1] == "Color: Blue":
+                        if c1[1][0] == "Color: Red":
+                            player.color = [255, 0, 255]
 
 def gameloop():
     running = True
+    player.reset()
     nodes_init(connections)
     while running:
         for event in pygame.event.get():
