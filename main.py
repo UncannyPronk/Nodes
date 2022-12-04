@@ -102,8 +102,8 @@ class Node:
         return result
 
 nodes = []
-nodes.append(Node(3, 3, "Player"))
-nodes.append(Node(0, 1, "Walk"))
+nodes.append(Node(3, 1, "Player"))
+nodes.append(Node(0, 0, "Walk"))
 connections = []
 
 player = Player()
@@ -115,6 +115,8 @@ def node_graph():
     key_time = 0
     while running:
         screen.fill((0, 25, 20))
+
+        write(True, "Node Graph", (550, 30), (0, 80, 30), 100)
 
         # Node follows mouse when selected
         hover = []
