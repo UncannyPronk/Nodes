@@ -277,6 +277,8 @@ def nodes_init(connections):
             if c[1][0] == "Sword":
                 player.attributes.append("Sword")
 
+# make the player jump when w is pressed
+
 def gameloop():
     running = True
     player.reset()
@@ -284,6 +286,7 @@ def gameloop():
         enemy.reset()
     nodes_init(connections)
     while running:
+        scrollx += (player.rect.x - scrollx - 268)/20
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
