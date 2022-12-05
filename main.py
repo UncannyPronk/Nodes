@@ -32,6 +32,7 @@ class Player(pygame.sprite.Sprite):
         self.state = "walk"
     def reset(self):
         self.state = "idle"
+        self.rect = pygame.Rect(300, 336, 64, 64)
         self.attributes = []
     def update(self):
         self.animationvar += 0.2
@@ -44,6 +45,38 @@ class Player(pygame.sprite.Sprite):
             self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
         if self.state == "walk":
             self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+            self.rect.x += 4
+        if self.state == "sword":
+            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 2*64, 64, 64))
+        self.image.set_colorkey((0, 255, 0))
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Enemy, self).__init__()
+        self.spritesheet = pygame.image.load("enemy_img.png")
+        self.spritesheet = pygame.transform.scale(self.spritesheet, (512, 3*64))
+        self.image = pygame.Surface([64, 64])
+        self.image.blit(self.spritesheet, (0, 0), (0, 0, 64, 64))
+        self.image.set_colorkey((0, 255, 0))
+        self.rect = pygame.Rect(700, 336, 64, 64)
+        self.animationvar = 0
+        self.state = "walk"
+        self.prev_state = self.state
+    def reset(self):
+        self.state = "walk"
+        self.rect = pygame.Rect(700, 336, 64, 64)
+    def update(self):
+        self.animationvar += 0.2
+        if self.animationvar >= 8:
+            self.animationvar = 0
+            if self.state == "sword":
+                self.state = self.prev_state
+        self.image.fill((0, 255, 0))
+        if self.state == "idle":
+            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
+        if self.state == "walk":
+            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+            self.rect.x -= 2
         if self.state == "sword":
             self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 2*64, 64, 64))
         self.image.set_colorkey((0, 255, 0))
@@ -115,6 +148,13 @@ connections = []
 player = Player()
 playergrp = pygame.sprite.Group()
 playergrp.add(player)
+
+enemylist = []
+enemygrp = pygame.sprite.Group()
+for i in range(1):
+    enemylist.append(Enemy())
+for enemy in enemylist:
+    enemygrp.add(enemy)
 
 def node_graph():
     running = True
@@ -220,6 +260,8 @@ def nodes_init(connections):
 def gameloop():
     running = True
     player.reset()
+    for enemy in enemylist:
+        enemy.reset()
     nodes_init(connections)
     while running:
         for event in pygame.event.get():
@@ -241,10 +283,24 @@ def gameloop():
                         player.state = "sword"
                         player.animationvar = 0
 
+        for enemy in enemylist:
+            if enemy.rect.colliderect(player.rect):
+                if not enemy.state == "sword":
+                    enemy.prev_state = enemy.state
+                enemy.state = "sword"
+                if enemy.state == "sword" and enemy.animationvar > 4:
+                    player.rect.x -= 64
+                if player.state == "sword":
+                    enemy.rect.x += 64
+            else:
+                enemy.state = "walk"
+
         display.fill((10, 55, 120))
         pygame.draw.rect(display, (140, 100, 20), (0, 400, 1000, 200))
         playergrp.draw(display)
         playergrp.update()
+        enemygrp.draw(display)
+        enemygrp.update()
 
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
         pygame.display.update()
