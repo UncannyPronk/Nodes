@@ -6,7 +6,7 @@ from random import randint as rd
 
 pygame.init()
 sw, sh = pygame.display.Info().current_w, pygame.display.Info().current_h
-screen = pygame.display.set_mode((sw, sh))
+screen = pygame.display.set_mode((sw, sh), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 display = pygame.Surface([1000, 600])
 
@@ -19,28 +19,33 @@ def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fonts
         return text, position
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, attributes=[]):
+    def __init__(self):
         super(Player, self).__init__()
         self.spritesheet = pygame.image.load("player_img.png")
-        self.spritesheet = pygame.transform.scale(self.spritesheet, (512, 128))
+        self.spritesheet = pygame.transform.scale(self.spritesheet, (512, 3*64))
         self.image = pygame.Surface([64, 64])
         self.image.blit(self.spritesheet, (0, 0), (0, 0, 64, 64))
         self.image.set_colorkey((0, 255, 0))
         self.rect = pygame.Rect(300, 336, 64, 64)
         self.animationvar = 0
-        self.attributes = attributes
+        self.attributes = []
         self.state = "walk"
     def reset(self):
         self.state = "idle"
+        self.attributes = []
     def update(self):
         self.animationvar += 0.2
         if self.animationvar >= 8:
             self.animationvar = 0
+            if self.state == "sword":
+                self.state = prev_state
         self.image.fill((0, 255, 0))
         if self.state == "idle":
-            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0, 64, 64))
+            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
         if self.state == "walk":
-            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 64, 64, 64))
+            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+        if self.state == "sword":
+            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 2*64, 64, 64))
         self.image.set_colorkey((0, 255, 0))
 
 class Node:
@@ -102,8 +107,9 @@ class Node:
         return result
 
 nodes = []
-nodes.append(Node(3, 1, "Player"))
+nodes.append(Node(3, 2, "Player"))
 nodes.append(Node(0, 0, "Walk"))
+nodes.append(Node(1, 1, "Sword"))
 connections = []
 
 player = Player()
@@ -208,6 +214,8 @@ def nodes_init(connections):
         if c[1][1] == "Player":
             if c[1][0] == "Walk":
                 player.state = "walk"
+            if c[1][0] == "Sword":
+                player.attributes.append("Sword")
 
 def gameloop():
     running = True
@@ -225,7 +233,13 @@ def gameloop():
 
             keys_pressed = pygame.key.get_pressed()
             if keys_pressed[K_SPACE]:
-                pass
+                for att in player.attributes:
+                    if att == "Sword" and not player.state == "sword":
+                        global prev_state
+                        if not player.state == "sword":
+                            prev_state = player.state
+                        player.state = "sword"
+                        player.animationvar = 0
 
         display.fill((10, 55, 120))
         pygame.draw.rect(display, (140, 100, 20), (0, 400, 1000, 200))
