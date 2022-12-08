@@ -286,7 +286,7 @@ def gameloop():
         enemy.reset()
     nodes_init(connections)
     while running:
-        scrollx += (player.rect.x - scrollx - 268)/20
+        # scrollx += (player.rect.x - scrollx - 268)/20
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
