@@ -33,7 +33,9 @@ class Player(pygame.sprite.Sprite):
         self.controller = False
         self.evade = False
         self.grav = 0
+        self.hp = 100
     def reset(self):
+        self.evade = False
         self.state = "idle"
         self.rect = pygame.Rect(300, 336, 64, 64)
         self.attributes = []
@@ -44,6 +46,10 @@ class Player(pygame.sprite.Sprite):
             self.animationvar = 0
             if self.state == "sword":
                 self.state = prev_state
+        self.grav += 0.2
+        self.rect.y += self.grav
+        if self.rect.y > 336:
+            self.rect.y = 336
         self.image.fill((0, 255, 0))
         if self.state == "idle":
             if self.evade:
@@ -78,7 +84,7 @@ class Player(pygame.sprite.Sprite):
                 else:
                     keys_pressed = pygame.key.get_pressed()
                     if keys_pressed[K_w]:
-                        pass
+                        self.grav = -4
                     if keys_pressed[K_d]:
                         self.rect.x += 4
                         self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
@@ -103,6 +109,7 @@ class Enemy(pygame.sprite.Sprite):
         self.animationvar = 0
         self.state = "walk"
         self.prev_state = self.state
+        self.grav = 0
     def reset(self):
         self.state = "walk"
         self.rect = pygame.Rect(700, 336, 64, 64)
@@ -112,6 +119,10 @@ class Enemy(pygame.sprite.Sprite):
             self.animationvar = 0
             if self.state == "sword":
                 self.state = self.prev_state
+        self.grav += 0.2
+        self.rect.y += self.grav
+        if self.rect.y > 336:
+            self.rect.y = 336
         self.image.fill((0, 255, 0))
         if self.state == "idle":
             self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
@@ -180,13 +191,19 @@ class Node:
 
         return result
 
-nodes = []
-nodes.append(Node(4, 2, "Player"))
-nodes.append(Node(2, 1, "Walk"))
-# nodes.append(Node(1, 1, "Sword"))
-# nodes.append(Node(0, 1, "Evade"))
-nodes.append(Node(0, 0, "WASD"))
-connections = []
+class Trigger(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Trigger, self).__init__()
+        self.rect = Rect(0, 0, 60, 10)
+        self.image = pygame.Surface([60, 10])
+        self.image.fill((255, 0, 0))
+    def update(self):
+        pass
+    def triggerzone(self, entity):
+        if self.rect.colliderect(entity.rect):
+            return True
+        else:
+            return False
 
 player = Player()
 playergrp = pygame.sprite.Group()
@@ -194,10 +211,38 @@ playergrp.add(player)
 
 enemylist = []
 enemygrp = pygame.sprite.Group()
-for i in range(0):
+for i in range(1):
     enemylist.append(Enemy())
 for enemy in enemylist:
     enemygrp.add(enemy)
+
+triggerables = [player]
+for enemy in enemylist:
+    triggerables.append(enemy)
+
+nodes = []
+nodes.append(Node(4, 2, "Player"))
+nodes.append(Node(2, 1, "Walk"))
+nodes.append(Node(1, 1, "Sword"))
+nodes.append(Node(0, 1, "Evade"))
+# nodes.append(Node(0, 0, "WASD"))
+connections = []
+
+class jumpTrigger(Trigger):
+    def __init__(self):
+        super(jumpTrigger, self).__init__()
+        self.rect = Rect(400, 390, 60, 10)
+    def update(self):
+        for entity in triggerables:
+            if self.triggerzone(entity):
+                entity.grav = -10
+
+triggerlist = []
+triggergrp = pygame.sprite.Group()
+for i in range(1):
+    triggerlist.append(jumpTrigger())
+for trigger in triggerlist:
+    triggergrp.add(trigger)
 
 def node_graph():
     running = True
@@ -325,24 +370,31 @@ def gameloop():
                 if event.key == K_ESCAPE:
                     running = False
 
-            keys_pressed = pygame.key.get_pressed()
-            if keys_pressed[K_SPACE]:
-                for att in player.attributes:
-                    if att == "Sword" and not player.state == "sword":
-                        global prev_state
-                        if not player.state == "sword":
-                            prev_state = player.state
-                        player.state = "sword"
-                        player.animationvar = 0
+        keys_pressed = pygame.key.get_pressed()
+        # if keys_pressed[K_SPACE]:
+        #     for att in player.attributes:
+        #         if att == "Sword" and not player.state == "sword":
+        #             global prev_state
+        #             prev_state = player.state
+        #             player.state = "sword"
+        #             player.animationvar = 0
 
         for enemy in enemylist:
             if enemy.rect.colliderect(player.rect):
+                #player
+                for att in player.attributes:
+                    if att == "Sword" and not player.state == "sword":
+                        global prev_state
+                        prev_state = player.state
+                        player.state = "sword"
+                        player.animationvar = 0
+                #enemy
                 if not enemy.state == "sword":
                     enemy.prev_state = enemy.state
                 enemy.state = "sword"
                 if enemy.state == "sword" and enemy.animationvar > 4:
                     player.rect.x -= 64
-                if player.state == "sword":
+                if player.state == "sword" and player.animationvar > 4:
                     enemy.rect.x += 64
             else:
                 enemy.state = "walk"
@@ -353,6 +405,8 @@ def gameloop():
         playergrp.update()
         enemygrp.draw(display)
         enemygrp.update()
+        triggergrp.draw(display)
+        triggergrp.update()
 
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
         pygame.display.update()
