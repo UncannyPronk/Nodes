@@ -31,6 +31,8 @@ class Player(pygame.sprite.Sprite):
         self.attributes = []
         self.state = "walk"
         self.controller = False
+        self.evade = False
+        self.grav = 0
     def reset(self):
         self.state = "idle"
         self.rect = pygame.Rect(300, 336, 64, 64)
@@ -44,24 +46,47 @@ class Player(pygame.sprite.Sprite):
                 self.state = prev_state
         self.image.fill((0, 255, 0))
         if self.state == "idle":
-            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
-        if self.state == "walk":
-            if not self.controller:
-                self.rect.x += 4
-                self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+            if self.evade:
+                for enemy in enemylist:
+                    if self.rect.x < enemy.rect.x:
+                        if player.rect.right > enemy.rect.x - 200:
+                            self.image.blit(pygame.transform.flip(self.spritesheet, 1, 0), (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                            self.rect.x -= 2
+                        else:
+                            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
+                    else:
+                        self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
             else:
-                keys_pressed = pygame.key.get_pressed()
-                if keys_pressed[K_w]:
-                    #jump
-                    pass
-                if keys_pressed[K_d]:
+                self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
+        if self.state == "walk":
+            if self.evade:
+                for enemy in enemylist:
+                    if self.rect.x < enemy.rect.x:
+                        if player.rect.right > enemy.rect.x - 200:
+                            self.image.blit(pygame.transform.flip(self.spritesheet, 1, 0), (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                            self.rect.x -= 2
+                        else:
+                            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                            self.rect.x += 4
+                    else:
+                        self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                        self.rect.x += 4
+            else:
+                if not self.controller:
                     self.rect.x += 4
                     self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
-                elif keys_pressed[K_a]:
-                    self.rect.x -= 4
-                    self.image.blit(pygame.transform.flip(self.spritesheet, 1, 0), (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
                 else:
-                    self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
+                    keys_pressed = pygame.key.get_pressed()
+                    if keys_pressed[K_w]:
+                        pass
+                    if keys_pressed[K_d]:
+                        self.rect.x += 4
+                        self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                    elif keys_pressed[K_a]:
+                        self.rect.x -= 4
+                        self.image.blit(pygame.transform.flip(self.spritesheet, 1, 0), (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                    else:
+                        self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
         if self.state == "sword":
             self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 2*64, 64, 64))
         self.image.set_colorkey((0, 255, 0))
@@ -156,10 +181,11 @@ class Node:
         return result
 
 nodes = []
-nodes.append(Node(3, 2, "Player"))
-nodes.append(Node(0, 1, "Walk"))
-nodes.append(Node(1, 1, "Sword"))
-nodes.append(Node(2, 0, "WASD"))
+nodes.append(Node(4, 2, "Player"))
+nodes.append(Node(2, 1, "Walk"))
+# nodes.append(Node(1, 1, "Sword"))
+# nodes.append(Node(0, 1, "Evade"))
+nodes.append(Node(0, 0, "WASD"))
 connections = []
 
 player = Player()
@@ -168,7 +194,7 @@ playergrp.add(player)
 
 enemylist = []
 enemygrp = pygame.sprite.Group()
-for i in range(1):
+for i in range(0):
     enemylist.append(Enemy())
 for enemy in enemylist:
     enemygrp.add(enemy)
@@ -274,6 +300,9 @@ def nodes_init(connections):
                 for c1 in connections:
                     if c1[1][1] == "Walk" and c1[1][0] == "WASD":
                         player.controller = True
+
+            if c[1][0] == "Evade":
+                player.evade = True
             if c[1][0] == "Sword":
                 player.attributes.append("Sword")
 
