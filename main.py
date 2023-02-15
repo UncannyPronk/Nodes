@@ -3,12 +3,16 @@ from pygame import *
 from pygame.locals import *
 from pygame import mixer
 from random import randint as rd
+import json
 
 pygame.init()
 sw, sh = pygame.display.Info().current_w, pygame.display.Info().current_h
 screen = pygame.display.set_mode((sw, sh), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 display = pygame.Surface([1000, 600])
+
+with open("tilemap.json", 'r') as tilemap_file:
+    tilemap = json.load(tilemap_file)
 
 def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fontsize=20, font='arial'):
     font = pygame.font.SysFont(font, fontsize)
@@ -231,7 +235,7 @@ connections = []
 class jumpTrigger(Trigger):
     def __init__(self):
         super(jumpTrigger, self).__init__()
-        self.rect = Rect(400, 390, 60, 10)
+        self.rect = Rect(400, 380, 60, 10)
     def update(self):
         for entity in triggerables:
             if self.triggerzone(entity):
@@ -336,7 +340,7 @@ def node_graph():
 
         pygame.display.update()
         clock.tick(60)
-
+ 
 def nodes_init(connections):
     for c in connections:
         if c[1][1] == "Player":
@@ -370,7 +374,7 @@ def gameloop():
                 if event.key == K_ESCAPE:
                     running = False
 
-        keys_pressed = pygame.key.get_pressed()
+        # keys_pressed = pygame.key.get_pressed()
         # if keys_pressed[K_SPACE]:
         #     for att in player.attributes:
         #         if att == "Sword" and not player.state == "sword":
@@ -400,7 +404,23 @@ def gameloop():
                 enemy.state = "walk"
 
         display.fill((10, 55, 120))
-        pygame.draw.rect(display, (140, 100, 20), (0, 400, 1000, 200))
+        # pygame.draw.rect(display, (140, 100, 20), (0, 400, 1000, 200))
+
+        tilerects = []
+        y = 0
+        for row in tilemap:
+            x = 0
+            for tile in row:
+                if tile > 0:
+                    tilerects.append(Rect(x*64, y*64, 64, 64))
+                if tile == 1:
+                    pass
+                x += 1
+            y += 1
+
+        for tile in tilerects:
+            pygame.draw.rect(display, (255, 100, 0), tile)
+
         playergrp.draw(display)
         playergrp.update()
         enemygrp.draw(display)
