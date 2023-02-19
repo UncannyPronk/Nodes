@@ -30,20 +30,52 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.Surface([64, 64])
         self.image.blit(self.spritesheet, (0, 0), (0, 0, 64, 64))
         self.image.set_colorkey((0, 255, 0))
-        self.rect = pygame.Rect(300, 336, 64, 64)
+        self.rect = pygame.Rect(300, 100, 64, 64)
         self.animationvar = 0
         self.attributes = []
-        self.state = "walk"
+        self.state = "idle"
         self.controller = False
+        self.direction = "right"
+        self.movement = [0, 0]
         self.evade = False
         self.grav = 0
         self.hp = 100
     def reset(self):
         self.evade = False
         self.state = "idle"
-        self.rect = pygame.Rect(300, 336, 64, 64)
+        self.grav = 0
+        self.rect = pygame.Rect(300, 100, 64, 64)
         self.attributes = []
         self.controller = False
+    def move(self, tiles):
+        collision_types = {"right": False, "left":False, "top":False, "bottom":False}
+        if self.state != "idle":
+            self.rect.x += self.movement[0]
+        hit_list = []
+        for tile in tiles:
+            if self.rect.colliderect(tile):
+                hit_list.append(tile)
+        for tile in hit_list:
+            if self.movement[0] > 0:
+                collision_types["right"] = True
+                self.rect.right = tile.left
+            elif self.movement[0] < 0:
+                collision_types["left"] = True
+                self.rect.left = tile.right
+        self.rect.y += self.movement[1]
+        hit_list = []
+        for tile in tiles:
+            if self.rect.colliderect(tile):
+                hit_list.append(tile)
+        for tile in hit_list:
+            if self.movement[1] > 0:
+                collision_types["bottom"] = True
+                self.rect.bottom = tile.top
+                self.grav = 0
+            elif self.movement[1] < 0:
+                collision_types["top"] = True
+                self.rect.top = tile.bottom
+        return collision_types
     def update(self):
         self.animationvar += 0.2
         if self.animationvar >= 8:
@@ -51,9 +83,6 @@ class Player(pygame.sprite.Sprite):
             if self.state == "sword":
                 self.state = prev_state
         self.grav += 0.2
-        self.rect.y += self.grav
-        if self.rect.y > 336:
-            self.rect.y = 336
         self.image.fill((0, 255, 0))
         if self.state == "idle":
             if self.evade:
@@ -83,7 +112,6 @@ class Player(pygame.sprite.Sprite):
                         self.rect.x += 4
             else:
                 if not self.controller:
-                    self.rect.x += 4
                     self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
                 else:
                     keys_pressed = pygame.key.get_pressed()
@@ -109,14 +137,44 @@ class Enemy(pygame.sprite.Sprite):
         self.image = pygame.Surface([64, 64])
         self.image.blit(self.spritesheet, (0, 0), (0, 0, 64, 64))
         self.image.set_colorkey((0, 255, 0))
-        self.rect = pygame.Rect(700, 336, 64, 64)
+        self.rect = pygame.Rect(700, 100, 64, 64)
         self.animationvar = 0
         self.state = "walk"
         self.prev_state = self.state
         self.grav = 0
     def reset(self):
+        self.rect = pygame.Rect(700, 100, 64, 64)
         self.state = "walk"
-        self.rect = pygame.Rect(700, 336, 64, 64)
+        self.grav = 0
+    def move(self, tiles):
+        collision_types = {"right": False, "left":False, "top":False, "bottom":False}
+        if self.state != "idle":
+            self.rect.x += self.movement[0]
+        hit_list = []
+        for tile in tiles:
+            if self.rect.colliderect(tile):
+                hit_list.append(tile)
+        for tile in hit_list:
+            if self.movement[0] > 0:
+                collision_types["right"] = True
+                self.rect.right = tile.left
+            elif self.movement[0] < 0:
+                collision_types["left"] = True
+                self.rect.left = tile.right
+        self.rect.y += self.movement[1]
+        hit_list = []
+        for tile in tiles:
+            if self.rect.colliderect(tile):
+                hit_list.append(tile)
+        for tile in hit_list:
+            if self..movement[1] > 0:
+                collision_types["bottom"] = True
+                self.rect.bottom = tile.top
+                self.grav = 0
+            elif self.movement[1] < 0:
+                collision_types["top"] = True
+                self.rect.top = tile.bottom
+        return collision_types
     def update(self):
         self.animationvar += 0.2
         if self.animationvar >= 8:
@@ -396,15 +454,12 @@ def gameloop():
                 if not enemy.state == "sword":
                     enemy.prev_state = enemy.state
                 enemy.state = "sword"
-                if enemy.state == "sword" and enemy.animationvar > 4:
-                    player.rect.x -= 64
+                if enemy.animationvar > 4:
+                    player.rect.x -= 32
                 if player.state == "sword" and player.animationvar > 4:
                     enemy.rect.x += 64
             else:
                 enemy.state = "walk"
-
-        display.fill((10, 55, 120))
-        # pygame.draw.rect(display, (140, 100, 20), (0, 400, 1000, 200))
 
         tilerects = []
         y = 0
@@ -418,6 +473,19 @@ def gameloop():
                 x += 1
             y += 1
 
+        player.movement = [0, 0]
+        if player.direction == "right":
+            player.movement[0] = 4
+        if player.direction == "left":
+            player.movement[1] = -4
+        player.movement[1] += player.grav
+
+        player.move(tilerects)
+        enemy.move(tilerects)
+
+        display.fill((10, 55, 120))
+        # pygame.draw.rect(display, (140, 100, 20), (0, 400, 1000, 200))
+
         for tile in tilerects:
             pygame.draw.rect(display, (255, 100, 0), tile)
 
@@ -425,8 +493,8 @@ def gameloop():
         playergrp.update()
         enemygrp.draw(display)
         enemygrp.update()
-        triggergrp.draw(display)
-        triggergrp.update()
+        # triggergrp.draw(display)
+        # triggergrp.update()
 
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
         pygame.display.update()
