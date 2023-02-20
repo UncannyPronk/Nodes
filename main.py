@@ -167,7 +167,7 @@ class Enemy(pygame.sprite.Sprite):
             if self.rect.colliderect(tile):
                 hit_list.append(tile)
         for tile in hit_list:
-            if self..movement[1] > 0:
+            if self.movement[1] > 0:
                 collision_types["bottom"] = True
                 self.rect.bottom = tile.top
                 self.grav = 0
