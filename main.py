@@ -43,12 +43,15 @@ class Player(pygame.sprite.Sprite):
         self.grav = 0
         self.on_ground = False
         self.hp = 100
+        self.attackpower = 10
+        self.jumpable = False
     def reset(self):
         self.evade = False
         self.state = "idle"
         self.grav = 0
         self.rect = pygame.Rect(300, 220, 64, 64)
         self.attributes = []
+        self.jumpable = False
         self.controller = False
     def move(self, tiles):
         collision_types = {"right": False, "left":False, "top":False, "bottom":False}
@@ -62,9 +65,13 @@ class Player(pygame.sprite.Sprite):
             if self.movement[0] > 0:
                 collision_types["right"] = True
                 self.rect.right = tile.left
+                # self.direction = "left"
+                if self.jumpable:
+                    self.grav = -4
             elif self.movement[0] < 0:
                 collision_types["left"] = True
                 self.rect.left = tile.right
+                # self.direction = "right"
         self.rect.y += self.movement[1]
         hit_list = []
         for tile in tiles:
@@ -154,6 +161,8 @@ class Enemy(pygame.sprite.Sprite):
         self.direction = "left"
         self.prev_state = self.state
         self.grav = 0
+        self.attackpower = 4
+        self.hp = 30
         self.movement = [0, 0]
     def reset(self):
         self.rect = pygame.Rect(self.orig_pos[0], self.orig_pos[1], 64, 64)
@@ -213,8 +222,8 @@ class Enemy(pygame.sprite.Sprite):
         self.image.set_colorkey((0, 255, 0))
 
 class Node:
-    def __init__(self, x, no=3, name="New Node"):
-        self.rect = Rect(x*300 + 20, 200, 200, 100)
+    def __init__(self, x, y, no=3, name="New Node"):
+        self.rect = Rect(x*300 + 20, y*200 + 80, 200, 100)
         self.name = name
         self.inputno = no
 
@@ -290,8 +299,7 @@ playergrp.add(player)
 
 enemylist = []
 enemygrp = pygame.sprite.Group()
-for i in range(1):
-    enemylist.append(Enemy(700, 260))
+enemylist.append(Enemy(700, 260))
 for enemy in enemylist:
     enemygrp.add(enemy)
 
@@ -300,10 +308,11 @@ for enemy in enemylist:
     triggerables.append(enemy)
 
 nodes = []
-nodes.append(Node(4, 2, "Player"))
-nodes.append(Node(2, 1, "Walk"))
-nodes.append(Node(1, 1, "Sword"))
-nodes.append(Node(0, 1, "Evade"))
+nodes.append(Node(4, 1, 2, "Player"))
+nodes.append(Node(1, 1, 1, "Jump"))
+nodes.append(Node(1, 2, 1, "Walk"))
+nodes.append(Node(2, 3, 1, "Sword"))
+nodes.append(Node(0, 0, 0, "Evade"))
 # nodes.append(Node(0, 0, "WASD"))
 connections = []
 
@@ -380,8 +389,9 @@ def node_graph():
                                     if node1 != node2:
                                         if node2.name == connection[1][1]:
                                             for rect in node2.inrects:
-                                                if rect[0].collidepoint(event.pos):
+                                                if rect[0].collidepoint(event.pos) and connection[0][1].colliderect(rect[0]):
                                                     connections.remove(connection)
+                                                    rect[1] = 0
             if event.type == MOUSEBUTTONUP:
                 if len(nodes) > 1:
                     for node1 in nodes:
@@ -390,10 +400,15 @@ def node_graph():
                                 node1.anchor = False
                                 if node1.outrect[1]:
                                     for rect in node2.inrects:
-                                        if rect[0].collidepoint(pygame.mouse.get_pos()):
+                                        if rect[0].collidepoint(pygame.mouse.get_pos()) and rect[1] == 0:
                                             connections.append([[node1.outrect[0], rect[0]], [node1.name, node2.name]])
                                             rect[1] = 1
-                        
+                                            for connection1 in connections:
+                                                for connection2 in connections:
+                                                    if not connection1 == connection2:
+                                                        if connection1[1][0] == connection2[1][0] and connection1[1][1] == connection2[1][1]:
+                                                            connections.pop()
+                                                            rect[1] = 0
                 else:
                     nodes[0].anchor = False
 
@@ -429,6 +444,8 @@ def nodes_init(connections):
                 player.evade = True
             if c[1][0] == "Sword":
                 player.attributes.append("Sword")
+            if c[1][0] == "Jump":
+                player.jumpable = True
 
 # make the player jump when w is pressed
 
@@ -458,6 +475,11 @@ def gameloop():
         #             player.state = "sword"
         #             player.animationvar = 0
 
+        for i in range(len(enemylist)):
+            if enemylist[i].hp <= 0:
+                enemylist[i].kill()
+                enemylist.pop(i)
+
         for enemy in enemylist:
             if enemy.rect.colliderect(player.rect):
                 #player
@@ -472,9 +494,11 @@ def gameloop():
                     enemy.prev_state = enemy.state
                 enemy.state = "sword"
                 if enemy.animationvar > 4:
-                    player.rect.x -= 10
+                    player.rect.x -= enemy.attackpower*4
+                    player.hp -= enemy.attackpower
                 if player.state == "sword" and player.animationvar > 4:
-                    enemy.rect.x += 20
+                    enemy.rect.x += player.attackpower*4
+                    enemy.hp -= player.attackpower
             else:
                 enemy.state = "walk"
 
@@ -490,16 +514,17 @@ def gameloop():
 
         player.movement = [0, 0]
         if player.direction == "right":
-            player.movement[0] = 4
+            player.movement[0] = 2
         if player.direction == "left":
-            player.movement[0] = -4
+            player.movement[0] = -2
         player.movement[1] += player.grav
 
-        enemy.movement[1] = 0
-        enemy.movement[1] += enemy.grav
-
+        for enemy in enemylist:
+            enemy.movement[1] = 0
+            enemy.movement[1] += enemy.grav
+            enemy.move(tilerects)
+    
         player.move(tilerects)
-        enemy.move(tilerects)
 
         display.fill((10, 55, 120))
         # pygame.draw.rect(display, (140, 100, 20), (0, 400, 1000, 200))
