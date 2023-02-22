@@ -48,6 +48,7 @@ class Player(pygame.sprite.Sprite):
     def reset(self):
         self.evade = False
         self.state = "idle"
+        self.direction = "right"
         self.grav = 0
         self.rect = pygame.Rect(300, 220, 64, 64)
         self.attributes = []
@@ -115,7 +116,7 @@ class Player(pygame.sprite.Sprite):
                     if self.rect.x < enemy.rect.x:
                         if player.rect.right > enemy.rect.x - 200 and player.rect.right < enemy.rect.x - 180:
                             self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
-                            self.rect.x += 4
+                            self.rect.x += 2
                             self.direction = "left"
                         elif player.rect.right > enemy.rect.x - 180:
                             self.image.blit(self.spritesheet, (0, 0), (((8 - int(self.animationvar)) - 1)*64, 1*64, 64, 64))
@@ -123,7 +124,7 @@ class Player(pygame.sprite.Sprite):
                         else:
                             self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
                             self.direction = "right"
-                            self.rect.x -= 3
+                            self.rect.x -= 1
                     else:
                         self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
                         self.direction = "right"
