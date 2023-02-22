@@ -1,5 +1,6 @@
-import pygame, sys
-from pygame import * 
+import pygame
+import sys
+from pygame import *
 from pygame.locals import *
 from pygame import mixer
 from random import randint as rd
@@ -16,6 +17,7 @@ with open("tilemap.json", 'r') as tilemap_file:
 
 tilemap_img = pygame.image.load("tilesetimage.png")
 
+
 def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fontsize=20, font='arial'):
     font = pygame.font.SysFont(font, fontsize)
     text = font.render(text, True, color)
@@ -24,14 +26,17 @@ def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fonts
     else:
         return text, position
 
+
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super(Player, self).__init__()
         self.spritesheet = pygame.image.load("player_img.png")
-        self.spritesheet = pygame.transform.scale(self.spritesheet, (512, 3*64))
+        self.spritesheet = pygame.transform.scale(
+            self.spritesheet, (512, 3*64))
         self.image = pygame.Surface([64, 64])
         self.image.blit(self.spritesheet, (0, 0), (0, 0, 64, 64))
         self.image.set_colorkey((0, 255, 0))
+        self.actual_rect = pygame.Rect(300, 220, 64, 64)
         self.rect = pygame.Rect(300, 220, 64, 64)
         self.animationvar = 0
         self.attributes = []
@@ -45,51 +50,58 @@ class Player(pygame.sprite.Sprite):
         self.hp = 100
         self.attackpower = 10
         self.jumpable = False
+
     def reset(self):
         self.evade = False
         self.state = "idle"
         self.direction = "right"
         self.grav = 0
         self.rect = pygame.Rect(300, 220, 64, 64)
+        self.actual_rect = pygame.Rect(300, 220, 64, 64)
         self.attributes = []
         self.jumpable = False
         self.controller = False
+
     def move(self, tiles):
-        collision_types = {"right": False, "left":False, "top":False, "bottom":False}
+        collision_types = {"right": False,
+                           "left": False, "top": False, "bottom": False}
         if self.state != "idle":
-            self.rect.x += self.movement[0]
+            self.actual_rect.x += self.movement[0]
         hit_list = []
         for tile in tiles:
-            if self.rect.colliderect(tile):
+            if self.actual_rect.colliderect(tile):
                 hit_list.append(tile)
         for tile in hit_list:
             if self.movement[0] > 0:
                 collision_types["right"] = True
-                self.rect.right = tile.left
+                self.actual_rect.right = tile.left
                 # self.direction = "left"
                 if self.jumpable:
                     self.grav = -4
             elif self.movement[0] < 0:
                 collision_types["left"] = True
-                self.rect.left = tile.right
+                self.actual_rect.left = tile.right
                 # self.direction = "right"
-        self.rect.y += self.movement[1]
+        self.actual_rect.y += self.movement[1]
         hit_list = []
         for tile in tiles:
-            if self.rect.colliderect(tile):
+            if self.actual_rect.colliderect(tile):
                 hit_list.append(tile)
         self.on_ground = False
         for tile in hit_list:
             if self.movement[1] > 0:
                 collision_types["bottom"] = True
-                self.rect.bottom = tile.top
+                self.actual_rect.bottom = tile.top
                 self.grav = 0
                 self.on_ground = True
             elif self.movement[1] < 0:
                 collision_types["top"] = True
-                self.rect.top = tile.bottom
+                self.actual_rect.top = tile.bottom
         return collision_types
+
     def update(self):
+        self.rect.x = self.actual_rect.x - scroll[0]
+        self.rect.y = self.actual_rect.y - scroll[1]
         self.animationvar += 0.2
         if self.animationvar >= 8:
             self.animationvar = 0
@@ -100,63 +112,79 @@ class Player(pygame.sprite.Sprite):
         if self.state == "idle":
             if self.evade:
                 for enemy in enemylist:
-                    if self.rect.x < enemy.rect.x:
-                        if player.rect.right > enemy.rect.x - 180:
-                            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                    if self.actual_rect.x < enemy.actual_rect.x:
+                        if player.actual_rect.right > enemy.actual_rect.x - 180:
+                            self.image.blit(self.spritesheet, (0, 0), (int(
+                                self.animationvar)*64, 1*64, 64, 64))
                             self.direction = "left"
                         else:
-                            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
+                            self.image.blit(self.spritesheet, (0, 0), (int(
+                                self.animationvar)*64, 0*64, 64, 64))
                     else:
-                        self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
+                        self.image.blit(self.spritesheet, (0, 0), (int(
+                            self.animationvar)*64, 0*64, 64, 64))
             else:
-                self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
+                self.image.blit(self.spritesheet, (0, 0),
+                                (int(self.animationvar)*64, 0*64, 64, 64))
         if self.state == "walk":
             if self.evade:
                 for enemy in enemylist:
-                    if self.rect.x < enemy.rect.x:
-                        if player.rect.right > enemy.rect.x - 200 and player.rect.right < enemy.rect.x - 180:
-                            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
-                            self.rect.x += 2
+                    if self.actual_rect.x < enemy.actual_rect.x:
+                        if player.actual_rect.right > enemy.actual_rect.x - 200 and player.actual_rect.right < enemy.actual_rect.x - 180:
+                            self.image.blit(self.spritesheet, (0, 0), (int(
+                                self.animationvar)*64, 0*64, 64, 64))
+                            self.actual_rect.x += 2
                             self.direction = "left"
-                        elif player.rect.right > enemy.rect.x - 180:
-                            self.image.blit(self.spritesheet, (0, 0), (((8 - int(self.animationvar)) - 1)*64, 1*64, 64, 64))
+                        elif player.actual_rect.right > enemy.actual_rect.x - 180:
+                            self.image.blit(self.spritesheet, (0, 0), ((
+                                (8 - int(self.animationvar)) - 1)*64, 1*64, 64, 64))
                             self.direction = "left"
                         else:
-                            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                            self.image.blit(self.spritesheet, (0, 0), (int(
+                                self.animationvar)*64, 1*64, 64, 64))
                             self.direction = "right"
-                            self.rect.x -= 1
+                            self.actual_rect.x -= 1
                     else:
-                        self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                        self.image.blit(self.spritesheet, (0, 0), (int(
+                            self.animationvar)*64, 1*64, 64, 64))
                         self.direction = "right"
             else:
                 if not self.controller:
-                    self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                    self.image.blit(self.spritesheet, (0, 0),
+                                    (int(self.animationvar)*64, 1*64, 64, 64))
                 else:
                     keys_pressed = pygame.key.get_pressed()
                     if keys_pressed[K_w]:
                         self.grav = -4
                     if keys_pressed[K_d]:
                         self.direction = "right"
-                        self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                        self.image.blit(self.spritesheet, (0, 0), (int(
+                            self.animationvar)*64, 1*64, 64, 64))
                     elif keys_pressed[K_a]:
                         self.direction = "left"
-                        self.image.blit(pygame.transform.flip(self.spritesheet, 1, 0), (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                        self.image.blit(pygame.transform.flip(
+                            self.spritesheet, 1, 0), (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
                     else:
-                        self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
+                        self.image.blit(self.spritesheet, (0, 0), (int(
+                            self.animationvar)*64, 0*64, 64, 64))
         if self.state == "sword":
-            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 2*64, 64, 64))
+            self.image.blit(self.spritesheet, (0, 0),
+                            (int(self.animationvar)*64, 2*64, 64, 64))
         self.image.set_colorkey((0, 255, 0))
+
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, xpos, ypos):
         super(Enemy, self).__init__()
         self.spritesheet = pygame.image.load("enemy_img.png")
-        self.spritesheet = pygame.transform.scale(self.spritesheet, (512, 3*64))
+        self.spritesheet = pygame.transform.scale(
+            self.spritesheet, (512, 3*64))
         self.image = pygame.Surface([64, 64])
         self.image.blit(self.spritesheet, (0, 0), (0, 0, 64, 64))
         self.image.set_colorkey((0, 255, 0))
         self.orig_pos = xpos, ypos
         self.rect = pygame.Rect(xpos, ypos, 64, 64)
+        self.actual_rect = self.rect
         self.animationvar = 0
         self.state = "walk"
         self.direction = "left"
@@ -165,43 +193,51 @@ class Enemy(pygame.sprite.Sprite):
         self.attackpower = 4
         self.hp = 30
         self.movement = [0, 0]
+
     def reset(self):
         self.rect = pygame.Rect(self.orig_pos[0], self.orig_pos[1], 64, 64)
+        self.actual_rect = pygame.Rect(
+            self.orig_pos[0], self.orig_pos[1], 64, 64)
         self.state = "walk"
         self.direction = "left"
         self.grav = 0
+
     def move(self, tiles):
-        collision_types = {"right": False, "left":False, "top":False, "bottom":False}
+        collision_types = {"right": False,
+                           "left": False, "top": False, "bottom": False}
         if self.state != "idle":
-            self.rect.x += self.movement[0]
+            self.actual_rect.x += self.movement[0]
         hit_list = []
         for tile in tiles:
-            if self.rect.colliderect(tile):
+            if self.actual_rect.colliderect(tile):
                 hit_list.append(tile)
         for tile in hit_list:
             if self.movement[0] > 0:
                 collision_types["right"] = True
-                self.rect.right = tile.left
+                self.actual_rect.right = tile.left
                 self.direction = "left"
             elif self.movement[0] < 0:
                 collision_types["left"] = True
-                self.rect.left = tile.right
+                self.actual_rect.left = tile.right
                 self.direction = "right"
-        self.rect.y += self.movement[1]
+        self.actual_rect.y += self.movement[1]
         hit_list = []
         for tile in tiles:
-            if self.rect.colliderect(tile):
+            if self.actual_rect.colliderect(tile):
                 hit_list.append(tile)
         for tile in hit_list:
             if self.movement[1] > 0:
                 collision_types["bottom"] = True
-                self.rect.bottom = tile.top
+                self.actual_rect.bottom = tile.top
                 self.grav = 0
             elif self.movement[1] < 0:
                 collision_types["top"] = True
-                self.rect.top = tile.bottom
+                self.actual_rect.top = tile.bottom
         return collision_types
+
     def update(self):
+        self.rect.x = self.actual_rect.x - scroll[0]
+        self.rect.y = self.actual_rect.y - scroll[1]
         self.animationvar += 0.2
         if self.animationvar >= 8:
             self.animationvar = 0
@@ -210,17 +246,22 @@ class Enemy(pygame.sprite.Sprite):
         self.grav += 0.2
         self.image.fill((0, 255, 0))
         if self.state == "idle":
-            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 0*64, 64, 64))
+            self.image.blit(self.spritesheet, (0, 0),
+                            (int(self.animationvar)*64, 0*64, 64, 64))
         if self.state == "walk":
             if self.direction == "left":
-                self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                self.image.blit(self.spritesheet, (0, 0),
+                                (int(self.animationvar)*64, 1*64, 64, 64))
                 self.movement[0] = -2
             elif self.direction == "right":
-                self.image.blit(pygame.transform.flip(self.spritesheet, 1, 0), (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                self.image.blit(pygame.transform.flip(
+                    self.spritesheet, 1, 0), (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
                 self.movement[0] = 2
         if self.state == "sword":
-            self.image.blit(self.spritesheet, (0, 0), (int(self.animationvar)*64, 2*64, 64, 64))
+            self.image.blit(self.spritesheet, (0, 0),
+                            (int(self.animationvar)*64, 2*64, 64, 64))
         self.image.set_colorkey((0, 255, 0))
+
 
 class Node:
     def __init__(self, x, y, no=3, name="New Node"):
@@ -237,38 +278,46 @@ class Node:
         self.namespace = pygame.Surface(self.rect.size)
         self.outrect = [Rect(0, 0, 10, 20), 0]
         self.inrects = []
-        
+
         for i in range(self.inputno):
-            self.inrects.append([Rect(self.rect.x - 10, self.rect.y - 20 + 30*(i+1), 10, 20), 0])
+            self.inrects.append(
+                [Rect(self.rect.x - 10, self.rect.y - 20 + 30*(i+1), 10, 20), 0])
 
     def display(self):
         result = False
 
         mx, my = pygame.mouse.get_pos()
         if not self.rect.collidepoint(mx, my):
-            pygame.draw.rect(self.namespace, (10, 10, 10), (0, 0, self.rect.width, self.rect.height))
+            pygame.draw.rect(self.namespace, (10, 10, 10),
+                             (0, 0, self.rect.width, self.rect.height))
         else:
-            pygame.draw.rect(self.namespace, (30, 30, 30), (0, 0, self.rect.width, self.rect.height))
+            pygame.draw.rect(self.namespace, (30, 30, 30),
+                             (0, 0, self.rect.width, self.rect.height))
             result = True
 
         if self.selected:
-            pygame.draw.rect(self.namespace, (100, 30, 30), (0, 0, self.rect.width, self.rect.height))
+            pygame.draw.rect(self.namespace, (100, 30, 30),
+                             (0, 0, self.rect.width, self.rect.height))
 
         text, textpos = write(False, self.name, (20, 30), (0, 255, 100), 40)
-        
+
         self.namespace.blit(text, textpos)
-        pygame.draw.rect(self.namespace, (255, 255, 255), (0, 0, self.rect.width, self.rect.height), 3)
+        pygame.draw.rect(self.namespace, (255, 255, 255),
+                         (0, 0, self.rect.width, self.rect.height), 3)
         screen.blit(self.namespace, self.rect.topleft)
 
         for i in range(self.inputno):
-            pygame.draw.rect(screen, (30, 100, 255), (self.rect.x - 10, self.rect.y - 20 + 30*(i+1), 10, 20))
-        pygame.draw.rect(screen, (255, 255, 255), (self.rect.right, self.rect.centery - 10, 10, 20))
+            pygame.draw.rect(screen, (30, 100, 255), (self.rect.x -
+                             10, self.rect.y - 20 + 30*(i+1), 10, 20))
+        pygame.draw.rect(screen, (255, 255, 255),
+                         (self.rect.right, self.rect.centery - 10, 10, 20))
 
         self.outrect[0].x, self.outrect[0].y = self.rect.right, self.rect.centery - 10
-        
+
         if pygame.mouse.get_pressed()[0]:
             if self.outrect[1]:
-                pygame.draw.line(screen, (255, 255, 255), (mx, my), (self.outrect[0].center), 3)
+                pygame.draw.line(screen, (255, 255, 255),
+                                 (mx, my), (self.outrect[0].center), 3)
             elif self.outrect[0].collidepoint(mx, my):
                 self.outrect[1] = 1
         else:
@@ -280,19 +329,24 @@ class Node:
 
         return result
 
+
 class Trigger(pygame.sprite.Sprite):
     def __init__(self):
         super(Trigger, self).__init__()
         self.rect = Rect(0, 0, 60, 10)
+        self.actual_rect = self.rect
         self.image = pygame.Surface([60, 10])
         self.image.fill((255, 0, 0))
+
     def update(self):
         pass
+
     def triggerzone(self, entity):
-        if self.rect.colliderect(entity.rect):
+        if self.actual_rect.colliderect(entity.rect):
             return True
         else:
             return False
+
 
 player = Player()
 playergrp = pygame.sprite.Group()
@@ -317,14 +371,17 @@ nodes.append(Node(0, 0, 0, "Evade"))
 # nodes.append(Node(0, 0, "WASD"))
 connections = []
 
+
 class jumpTrigger(Trigger):
     def __init__(self):
         super(jumpTrigger, self).__init__()
-        self.rect = Rect(400, 380, 60, 10)
+        self.actual_rect = Rect(400, 380, 60, 10)
+
     def update(self):
         for entity in triggerables:
             if self.triggerzone(entity):
                 entity.grav = -10
+
 
 triggerlist = []
 triggergrp = pygame.sprite.Group()
@@ -332,6 +389,7 @@ for i in range(1):
     triggerlist.append(jumpTrigger())
 for trigger in triggerlist:
     triggergrp.add(trigger)
+
 
 def node_graph():
     running = True
@@ -391,7 +449,8 @@ def node_graph():
                                         if node2.name == connection[1][1]:
                                             for rect in node2.inrects:
                                                 if rect[0].collidepoint(event.pos) and connection[0][1].colliderect(rect[0]):
-                                                    connections.remove(connection)
+                                                    connections.remove(
+                                                        connection)
                                                     rect[1] = 0
             if event.type == MOUSEBUTTONUP:
                 if len(nodes) > 1:
@@ -402,7 +461,8 @@ def node_graph():
                                 if node1.outrect[1]:
                                     for rect in node2.inrects:
                                         if rect[0].collidepoint(pygame.mouse.get_pos()) and rect[1] == 0:
-                                            connections.append([[node1.outrect[0], rect[0]], [node1.name, node2.name]])
+                                            connections.append(
+                                                [[node1.outrect[0], rect[0]], [node1.name, node2.name]])
                                             rect[1] = 1
                                             for connection1 in connections:
                                                 for connection2 in connections:
@@ -423,15 +483,18 @@ def node_graph():
                         node.name = node.name[:-1]
                 else:
                     key_time = 0
-        
+
         for node in connections:
-            pygame.draw.line(screen, (255, 255, 255), node[0][0].center, node[0][1].center, 3)
-            
-        pygame.draw.polygon(screen, (10, 255, 100), ((sw - 100, 30), (sw - 60, 50), (sw - 100, 70)))
+            pygame.draw.line(screen, (255, 255, 255),
+                             node[0][0].center, node[0][1].center, 3)
+
+        pygame.draw.polygon(screen, (10, 255, 100), ((
+            sw - 100, 30), (sw - 60, 50), (sw - 100, 70)))
 
         pygame.display.update()
         clock.tick(60)
- 
+
+
 def nodes_init(connections):
     for c in connections:
         if c[1][1] == "Player":
@@ -448,7 +511,9 @@ def nodes_init(connections):
             if c[1][0] == "Jump":
                 player.jumpable = True
 
-# make the player jump when w is pressed
+
+scroll = [0, 0]
+
 
 def gameloop():
     running = True
@@ -457,7 +522,8 @@ def gameloop():
         enemy.reset()
     nodes_init(connections)
     while running:
-        # scrollx += (player.rect.x - scrollx - 268)/20
+        scroll[0] += (player.actual_rect.x - scroll[0] - 368)/10
+        scroll[1] += (player.actual_rect.y - scroll[1] - 268)/10
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -482,23 +548,23 @@ def gameloop():
                 enemylist.pop(i)
 
         for enemy in enemylist:
-            if enemy.rect.colliderect(player.rect):
-                #player
+            if enemy.actual_rect.colliderect(player.actual_rect):
+                # player
                 for att in player.attributes:
                     if att == "Sword" and not player.state == "sword":
                         global prev_state
                         prev_state = player.state
                         player.state = "sword"
                         player.animationvar = 0
-                #enemy
+                # enemy
                 if not enemy.state == "sword":
                     enemy.prev_state = enemy.state
                 enemy.state = "sword"
                 if enemy.animationvar > 4:
-                    player.rect.x -= enemy.attackpower*4
+                    player.actual_rect.x -= enemy.attackpower*4
                     player.hp -= enemy.attackpower
                 if player.state == "sword" and player.animationvar > 4:
-                    enemy.rect.x += player.attackpower*4
+                    enemy.actual_rect.x += player.attackpower*4
                     enemy.hp -= player.attackpower
             else:
                 enemy.state = "walk"
@@ -524,7 +590,7 @@ def gameloop():
             enemy.movement[1] = 0
             enemy.movement[1] += enemy.grav
             enemy.move(tilerects)
-    
+
         player.move(tilerects)
 
         display.fill((10, 55, 120))
@@ -535,23 +601,32 @@ def gameloop():
             for tile in row:
                 if tile > 0:
                     if tile == 1:
-                        display.blit(pygame.transform.scale(tilemap_img, (192, 192)), (x*64, y*64), (0, 0, 64, 64))
+                        display.blit(pygame.transform.scale(
+                            tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (0, 0, 64, 64))
                     if tile == 2:
-                        display.blit(pygame.transform.scale(tilemap_img, (192, 192)), (x*64, y*64), (64, 0, 64, 64))
+                        display.blit(pygame.transform.scale(
+                            tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (64, 0, 64, 64))
                     if tile == 3:
-                        display.blit(pygame.transform.scale(tilemap_img, (192, 192)), (x*64, y*64), (128, 0, 64, 64))
+                        display.blit(pygame.transform.scale(
+                            tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (128, 0, 64, 64))
                     if tile == 4:
-                        display.blit(pygame.transform.scale(tilemap_img, (192, 192)), (x*64, y*64), (0, 64, 64, 64))
+                        display.blit(pygame.transform.scale(
+                            tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (0, 64, 64, 64))
                     if tile == 5:
-                        display.blit(pygame.transform.scale(tilemap_img, (192, 192)), (x*64, y*64), (64, 64, 64, 64))
+                        display.blit(pygame.transform.scale(
+                            tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (64, 64, 64, 64))
                     if tile == 6:
-                        display.blit(pygame.transform.scale(tilemap_img, (192, 192)), (x*64, y*64), (128, 64, 64, 64))
+                        display.blit(pygame.transform.scale(
+                            tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (128, 64, 64, 64))
                     if tile == 7:
-                        display.blit(pygame.transform.scale(tilemap_img, (192, 192)), (x*64, y*64), (0, 128, 64, 64))
+                        display.blit(pygame.transform.scale(
+                            tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (0, 128, 64, 64))
                     if tile == 8:
-                        display.blit(pygame.transform.scale(tilemap_img, (192, 192)), (x*64, y*64), (64, 128, 64, 64))
+                        display.blit(pygame.transform.scale(
+                            tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (64, 128, 64, 64))
                     if tile == 9:
-                        display.blit(pygame.transform.scale(tilemap_img, (192, 192)), (x*64, y*64), (128, 128, 64, 64))
+                        display.blit(pygame.transform.scale(
+                            tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (128, 128, 64, 64))
                 x += 1
             y += 1
 
@@ -566,6 +641,7 @@ def gameloop():
         pygame.display.update()
         clock.tick(60)
 
+
 if __name__ == "__main__":
-    #main menu
+    # main menu
     node_graph()
