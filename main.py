@@ -55,6 +55,7 @@ class Player(pygame.sprite.Sprite):
         self.evade = False
         self.state = "idle"
         self.direction = "right"
+        self.hp = 100
         self.grav = 0
         self.rect = pygame.Rect(300, 220, 64, 64)
         self.actual_rect = pygame.Rect(300, 220, 64, 64)
@@ -190,8 +191,8 @@ class Enemy(pygame.sprite.Sprite):
         self.direction = "left"
         self.prev_state = self.state
         self.grav = 0
-        self.attackpower = 4
-        self.hp = 30
+        self.attackpower = 5
+        self.hp = 50
         self.movement = [0, 0]
 
     def reset(self):
@@ -352,6 +353,8 @@ player = Player()
 playergrp = pygame.sprite.Group()
 playergrp.add(player)
 
+level = 1
+
 enemylist = []
 enemygrp = pygame.sprite.Group()
 enemylist.append(Enemy(700, 260))
@@ -363,12 +366,17 @@ for enemy in enemylist:
     triggerables.append(enemy)
 
 nodes = []
-nodes.append(Node(4, 1, 2, "Player"))
-nodes.append(Node(1, 1, 1, "Jump"))
+nodes.append(Node(4, 1, 3, "Player"))
 nodes.append(Node(1, 2, 1, "Walk"))
 nodes.append(Node(2, 3, 1, "Sword"))
+nodes.append(Node(1, 1, 1, "Jump"))
 nodes.append(Node(0, 0, 0, "Evade"))
-# nodes.append(Node(0, 0, "WASD"))
+nodes.append(Node(0, 3, 0, "WASD"))
+
+nodes_avail = []
+nodes_avail.append(nodes[0])
+nodes_avail.append(nodes[1])
+
 connections = []
 
 
@@ -401,7 +409,7 @@ def node_graph():
 
         # Node follows mouse when selected
         hover = []
-        for node in nodes:
+        for node in nodes_avail:
             hover.append(node.display())
             if node.anchor:
                 node.rect.centerx, node.rect.centery = pygame.mouse.get_pos()
@@ -416,7 +424,7 @@ def node_graph():
                     running = False
                     pygame.quit()
                     sys.exit()
-                # for node in nodes:
+                # for node in nodes_avail:
                 #     if node.selected:
                 #         if not node.editedname:
                 #             node.name = ""
@@ -435,16 +443,16 @@ def node_graph():
                 if Rect(sw - 100, 30, 40, 40).collidepoint(event.pos):
                     gameloop()
                 else:
-                    for i in range(len(nodes)):
+                    for i in range(len(nodes_avail)):
                         if hover[i]:
-                            nodes[i].anchor = True
-                            nodes[i].selected = not nodes[i].selected
+                            nodes_avail[i].anchor = True
+                            nodes_avail[i].selected = not nodes_avail[i].selected
                         else:
-                            nodes[i].selected = False
+                            nodes_avail[i].selected = False
                     for connection in connections:
-                        for node1 in nodes:
+                        for node1 in nodes_avail:
                             if node1.name == connection[1][0]:
-                                for node2 in nodes:
+                                for node2 in nodes_avail:
                                     if node1 != node2:
                                         if node2.name == connection[1][1]:
                                             for rect in node2.inrects:
@@ -453,9 +461,9 @@ def node_graph():
                                                         connection)
                                                     rect[1] = 0
             if event.type == MOUSEBUTTONUP:
-                if len(nodes) > 1:
-                    for node1 in nodes:
-                        for node2 in nodes:
+                if len(nodes_avail) > 1:
+                    for node1 in nodes_avail:
+                        for node2 in nodes_avail:
                             if node1 != node2:
                                 node1.anchor = False
                                 if node1.outrect[1]:
@@ -471,10 +479,10 @@ def node_graph():
                                                             connections.pop()
                                                             rect[1] = 0
                 else:
-                    nodes[0].anchor = False
+                    nodes_avail[0].anchor = False
 
         # Edit the node name
-        for node in nodes:
+        for node in nodes_avail:
             if node.selected:
                 keys_pressed = pygame.key.get_pressed()
                 if keys_pressed[K_BACKSPACE] and len(node.name) > 0:
@@ -517,6 +525,7 @@ scroll = [0, 0]
 
 def gameloop():
     running = True
+    global level
     player.reset()
     for enemy in enemylist:
         enemy.reset()
@@ -532,6 +541,8 @@ def gameloop():
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     running = False
+                    if level == 2:
+                        player.hp = 0
 
         # keys_pressed = pygame.key.get_pressed()
         # if keys_pressed[K_SPACE]:
@@ -546,6 +557,12 @@ def gameloop():
             if enemylist[i].hp <= 0:
                 enemylist[i].kill()
                 enemylist.pop(i)
+        
+        if player.hp <= 0:
+            running = False
+            player.reset()
+            level += 1
+            nodes_avail.append(nodes[level])
 
         for enemy in enemylist:
             if enemy.actual_rect.colliderect(player.actual_rect):
