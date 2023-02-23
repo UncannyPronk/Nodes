@@ -639,7 +639,7 @@ def gameloop():
 
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
         pygame.display.update()
-        clock.tick(60)
+        clock.tick(120)
 
 
 if __name__ == "__main__":
