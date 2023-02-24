@@ -11,6 +11,7 @@ sw, sh = pygame.display.Info().current_w, pygame.display.Info().current_h
 screen = pygame.display.set_mode((sw, sh), pygame.FULLSCREEN)
 clock = pygame.time.Clock()
 display = pygame.Surface([1000, 600])
+display_rect = Rect(0, 0, 1000, 600)
 
 with open("tilemap.json", 'r') as tilemap_file:
     tilemap = json.load(tilemap_file)
@@ -75,13 +76,13 @@ class Player(pygame.sprite.Sprite):
         for tile in hit_list:
             if self.movement[0] > 0:
                 collision_types["right"] = True
-                self.actual_rect.right = tile.left
+                self.actual_rect.right = tile.left - 2
                 # self.direction = "left"
-                if self.jumpable:
-                    self.grav = -4
+                if self.jumpable and self.on_ground:
+                    self.grav = -6
             elif self.movement[0] < 0:
                 collision_types["left"] = True
-                self.actual_rect.left = tile.right
+                self.actual_rect.left = tile.right + 2
                 # self.direction = "right"
         self.actual_rect.y += self.movement[1]
         hit_list = []
@@ -130,7 +131,7 @@ class Player(pygame.sprite.Sprite):
         if self.state == "walk":
             if self.evade:
                 for enemy in enemylist:
-                    if self.actual_rect.x < enemy.actual_rect.x:
+                    if self.actual_rect.x < enemy.actual_rect.x and (player.actual_rect.y < enemy.actual_rect.bottom and player.actual_rect.bottom > enemy.actual_rect.y):
                         if player.actual_rect.right > enemy.actual_rect.x - 200 and player.actual_rect.right < enemy.actual_rect.x - 180:
                             self.image.blit(self.spritesheet, (0, 0), (int(
                                 self.animationvar)*64, 0*64, 64, 64))
@@ -144,7 +145,6 @@ class Player(pygame.sprite.Sprite):
                             self.image.blit(self.spritesheet, (0, 0), (int(
                                 self.animationvar)*64, 1*64, 64, 64))
                             self.direction = "right"
-                            self.actual_rect.x -= 1
                     else:
                         self.image.blit(self.spritesheet, (0, 0), (int(
                             self.animationvar)*64, 1*64, 64, 64))
@@ -308,8 +308,8 @@ class Node:
         screen.blit(self.namespace, self.rect.topleft)
 
         for i in range(self.inputno):
-            pygame.draw.rect(screen, (30, 100, 255), (self.rect.x -
-                             10, self.rect.y - 20 + 30*(i+1), 10, 20))
+            pygame.draw.rect(screen, (30, 100, 255),
+                         (self.rect.x - 10, self.rect.y - 20 + 30*(i+1), 10, 20))
         pygame.draw.rect(screen, (255, 255, 255),
                          (self.rect.right, self.rect.centery - 10, 10, 20))
 
@@ -358,6 +358,7 @@ level = 1
 enemylist = []
 enemygrp = pygame.sprite.Group()
 enemylist.append(Enemy(700, 260))
+enemylist.append(Enemy(2100, 550))
 for enemy in enemylist:
     enemygrp.add(enemy)
 
@@ -376,6 +377,9 @@ nodes.append(Node(0, 3, 0, "WASD"))
 nodes_avail = []
 nodes_avail.append(nodes[0])
 nodes_avail.append(nodes[1])
+nodes_avail.append(nodes[2])
+nodes_avail.append(nodes[3])
+nodes_avail.append(nodes[4])
 
 connections = []
 
@@ -533,6 +537,7 @@ def gameloop():
     while running:
         scroll[0] += (player.actual_rect.x - scroll[0] - 368)/10
         scroll[1] += (player.actual_rect.y - scroll[1] - 268)/10
+        display_rect.x, display_rect.y = scroll[0], scroll[1]
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -543,6 +548,8 @@ def gameloop():
                     running = False
                     if level == 2:
                         player.hp = 0
+                if event.key == K_x:
+                    print(player.actual_rect.topleft)
 
         # keys_pressed = pygame.key.get_pressed()
         # if keys_pressed[K_SPACE]:
@@ -557,7 +564,8 @@ def gameloop():
             if enemylist[i].hp <= 0:
                 enemylist[i].kill()
                 enemylist.pop(i)
-        
+                break
+
         if player.hp <= 0:
             running = False
             player.reset()
@@ -611,12 +619,11 @@ def gameloop():
         player.move(tilerects)
 
         display.fill((10, 55, 120))
-        # pygame.draw.rect(display, (140, 100, 20), (0, 400, 1000, 200))
         y = 0
         for row in tilemap:
             x = 0
             for tile in row:
-                if tile > 0:
+                if tile > 0 and Rect(x*64, y*64, 64, 64).colliderect(display_rect):
                     if tile == 1:
                         display.blit(pygame.transform.scale(
                             tilemap_img, (192, 192)), (x*64 - scroll[0], y*64 - scroll[1]), (0, 0, 64, 64))
