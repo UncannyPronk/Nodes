@@ -339,11 +339,8 @@ class Trigger(pygame.sprite.Sprite):
         self.image = pygame.Surface([60, 10])
         self.image.fill((255, 0, 0))
 
-    def update(self):
-        pass
-
     def triggerzone(self, entity):
-        if self.actual_rect.colliderect(entity.rect):
+        if self.actual_rect.colliderect(entity.actual_rect):
             return True
         else:
             return False
@@ -362,10 +359,6 @@ enemylist.append(Enemy(2100, 550))
 for enemy in enemylist:
     enemygrp.add(enemy)
 
-triggerables = [player]
-for enemy in enemylist:
-    triggerables.append(enemy)
-
 nodes = []
 nodes.append(Node(4, 1, 3, "Player"))
 nodes.append(Node(1, 2, 1, "Walk"))
@@ -383,22 +376,25 @@ nodes_avail.append(nodes[4])
 
 connections = []
 
+def save():
+    with open("savefile.json", "w") as savefile:
+        json.dump([0], savefile)
 
-class jumpTrigger(Trigger):
-    def __init__(self):
-        super(jumpTrigger, self).__init__()
-        self.actual_rect = Rect(400, 380, 60, 10)
+class Checkpoint(Trigger):
+    def __init__(self, x, y):
+        super(Checkpoint, self).__init__()
+        self.actual_rect = Rect(x, y, 60, 10)
 
     def update(self):
-        for entity in triggerables:
-            if self.triggerzone(entity):
-                entity.grav = -10
-
+        global scroll
+        self.rect.x, self.rect.y = self.actual_rect.x - scroll[0], self.actual_rect.y - scroll[1]
+        if self.triggerzone(player):
+            save()
 
 triggerlist = []
 triggergrp = pygame.sprite.Group()
 for i in range(1):
-    triggerlist.append(jumpTrigger())
+    triggerlist.append(Checkpoint(2622, 825))
 for trigger in triggerlist:
     triggergrp.add(trigger)
 
@@ -461,8 +457,7 @@ def node_graph():
                                         if node2.name == connection[1][1]:
                                             for rect in node2.inrects:
                                                 if rect[0].collidepoint(event.pos) and connection[0][1].colliderect(rect[0]):
-                                                    connections.remove(
-                                                        connection)
+                                                    connections.remove(connection)
                                                     rect[1] = 0
             if event.type == MOUSEBUTTONUP:
                 if len(nodes_avail) > 1:
@@ -546,7 +541,7 @@ def gameloop():
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     running = False
-                    if level == 2:
+                    if level == 2 or level == 3:
                         player.hp = 0
                 if event.key == K_x:
                     print(player.actual_rect.topleft)
@@ -658,8 +653,8 @@ def gameloop():
         playergrp.update()
         enemygrp.draw(display)
         enemygrp.update()
-        # triggergrp.draw(display)
-        # triggergrp.update()
+        triggergrp.draw(display)
+        triggergrp.update()
 
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
         pygame.display.update()
