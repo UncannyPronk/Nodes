@@ -370,9 +370,9 @@ nodes.append(Node(0, 3, 0, "WASD"))
 nodes_avail = []
 nodes_avail.append(nodes[0])
 nodes_avail.append(nodes[1])
-nodes_avail.append(nodes[2])
-nodes_avail.append(nodes[3])
-nodes_avail.append(nodes[4])
+# nodes_avail.append(nodes[2])
+# nodes_avail.append(nodes[3])
+# nodes_avail.append(nodes[4])
 
 connections = []
 
