@@ -18,7 +18,6 @@ with open("tilemap.json", 'r') as tilemap_file:
 
 tilemap_img = pygame.image.load("tilesetimage.png")
 
-
 def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fontsize=20, font='arial'):
     font = pygame.font.SysFont(font, fontsize)
     text = font.render(text, True, color)
@@ -26,7 +25,6 @@ def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fonts
         screen.blit(text, position)
     else:
         return text, position
-
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -173,7 +171,6 @@ class Player(pygame.sprite.Sprite):
                             (int(self.animationvar)*64, 2*64, 64, 64))
         self.image.set_colorkey((0, 255, 0))
 
-
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, xpos, ypos):
         super(Enemy, self).__init__()
@@ -263,7 +260,6 @@ class Enemy(pygame.sprite.Sprite):
                             (int(self.animationvar)*64, 2*64, 64, 64))
         self.image.set_colorkey((0, 255, 0))
 
-
 class Node:
     def __init__(self, x, y, no=3, name="New Node"):
         self.rect = Rect(x*300 + 20, y*200 + 80, 200, 100)
@@ -309,7 +305,7 @@ class Node:
 
         for i in range(self.inputno):
             pygame.draw.rect(screen, (30, 100, 255),
-                         (self.rect.x - 10, self.rect.y - 20 + 30*(i+1), 10, 20))
+                             (self.rect.x - 10, self.rect.y - 20 + 30*(i+1), 10, 20))
         pygame.draw.rect(screen, (255, 255, 255),
                          (self.rect.right, self.rect.centery - 10, 10, 20))
 
@@ -330,7 +326,6 @@ class Node:
 
         return result
 
-
 class Trigger(pygame.sprite.Sprite):
     def __init__(self):
         super(Trigger, self).__init__()
@@ -344,7 +339,6 @@ class Trigger(pygame.sprite.Sprite):
             return True
         else:
             return False
-
 
 player = Player()
 playergrp = pygame.sprite.Group()
@@ -378,7 +372,13 @@ connections = []
 
 def save():
     with open("savefile.json", "w") as savefile:
-        json.dump([0], savefile)
+        json.dump(level, savefile)
+save()
+
+def load():
+    with open("savefile.json", "r") as savefile:
+        global level
+        level = json.load(savefile)
 
 class Checkpoint(Trigger):
     def __init__(self, x, y):
@@ -387,7 +387,8 @@ class Checkpoint(Trigger):
 
     def update(self):
         global scroll
-        self.rect.x, self.rect.y = self.actual_rect.x - scroll[0], self.actual_rect.y - scroll[1]
+        self.rect.x, self.rect.y = self.actual_rect.x - \
+            scroll[0], self.actual_rect.y - scroll[1]
         if self.triggerzone(player):
             save()
 
@@ -397,7 +398,6 @@ for i in range(1):
     triggerlist.append(Checkpoint(2622, 825))
 for trigger in triggerlist:
     triggergrp.add(trigger)
-
 
 def node_graph():
     running = True
@@ -457,7 +457,8 @@ def node_graph():
                                         if node2.name == connection[1][1]:
                                             for rect in node2.inrects:
                                                 if rect[0].collidepoint(event.pos) and connection[0][1].colliderect(rect[0]):
-                                                    connections.remove(connection)
+                                                    connections.remove(
+                                                        connection)
                                                     rect[1] = 0
             if event.type == MOUSEBUTTONUP:
                 if len(nodes_avail) > 1:
@@ -479,6 +480,9 @@ def node_graph():
                                                             rect[1] = 0
                 else:
                     nodes_avail[0].anchor = False
+            if event.type == KEYDOWN:
+                if (event.key == K_LCTRL or event.key == K_RCTRL) and event.key == K_l:
+                    load()
 
         # Edit the node name
         for node in nodes_avail:
@@ -501,7 +505,6 @@ def node_graph():
         pygame.display.update()
         clock.tick(60)
 
-
 def nodes_init(connections):
     for c in connections:
         if c[1][1] == "Player":
@@ -518,9 +521,7 @@ def nodes_init(connections):
             if c[1][0] == "Jump":
                 player.jumpable = True
 
-
 scroll = [0, 0]
-
 
 def gameloop():
     running = True
@@ -659,7 +660,6 @@ def gameloop():
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
         pygame.display.update()
         clock.tick(120)
-
 
 if __name__ == "__main__":
     # main menu
