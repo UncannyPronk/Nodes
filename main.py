@@ -354,7 +354,7 @@ for enemy in enemylist:
     enemygrp.add(enemy)
 
 nodes = []
-nodes.append(Node(4, 1, 3, "Player"))
+nodes.append(Node(3, 2, 3, "Player"))
 nodes.append(Node(1, 2, 1, "Walk"))
 nodes.append(Node(2, 3, 1, "Sword"))
 nodes.append(Node(1, 1, 1, "Jump"))
@@ -373,7 +373,7 @@ connections = []
 def save():
     with open("savefile.json", "w") as savefile:
         json.dump(level, savefile)
-save()
+# save()
 
 def load():
     with open("savefile.json", "r") as savefile:
@@ -503,7 +503,7 @@ def node_graph():
             sw - 100, 30), (sw - 60, 50), (sw - 100, 70)))
 
         pygame.display.update()
-        clock.tick(60)
+        clock.tick(30)
 
 def nodes_init(connections):
     for c in connections:
@@ -525,6 +525,7 @@ scroll = [0, 0]
 
 def gameloop():
     running = True
+    count = 0
     global level
     player.reset()
     for enemy in enemylist:
@@ -658,6 +659,10 @@ def gameloop():
         triggergrp.update()
 
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
+        if level == 2:
+            count += 1
+            if count > 300:
+                write(True, "Press Esc if you are stuck or want to go back to the node graph.", (sw/2 - 450, 120), fontsize=40)
         pygame.display.update()
         clock.tick(120)
 
