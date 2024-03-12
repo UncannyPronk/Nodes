@@ -405,7 +405,7 @@ def node_graph():
     while running:
         screen.fill((0, 25, 20))
 
-        write(True, "Node Graph", (550, 30), (0, 80, 30), 100)
+        write(True, "Node Graph", (550, 30), (0, 120, 80), 100)
 
         # Node follows mouse when selected
         hover = []
@@ -532,6 +532,7 @@ def gameloop():
         enemy.reset()
     nodes_init(connections)
     while running:
+        sw, sh = pygame.display.Info().current_w, pygame.display.Info().current_h
         scroll[0] += (player.actual_rect.x - scroll[0] - 368)/10
         scroll[1] += (player.actual_rect.y - scroll[1] - 268)/10
         display_rect.x, display_rect.y = scroll[0], scroll[1]
@@ -662,9 +663,9 @@ def gameloop():
         if level == 2:
             count += 1
             if count > 300:
-                write(True, "Press Esc if you are stuck or want to go back to the node graph.", (sw/2 - 450, 120), fontsize=40)
+                write(True, "Press Esc if you are stuck or want to go back to the node graph anytime", (sw/2 - 520, 120), (255, 255, 255), 40)
         pygame.display.update()
-        clock.tick(120)
+        clock.tick(80)
 
 if __name__ == "__main__":
     # main menu
