@@ -66,7 +66,10 @@ class Player(pygame.sprite.Sprite):
         collision_types = {"right": False,
                            "left": False, "top": False, "bottom": False}
         if self.state != "idle":
-            self.actual_rect.x += self.movement[0]
+            if self.on_ground:
+                self.actual_rect.x += self.movement[0]
+            else:
+                self.actual_rect.x += self.movement[0]/2
         hit_list = []
         for tile in tiles:
             if self.actual_rect.colliderect(tile):
@@ -103,7 +106,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = self.actual_rect.x - scroll[0]
         self.rect.y = self.actual_rect.y - scroll[1]
         self.animationvar += 0.2
-        if self.animationvar >= 8:
+        if self.animationvar > 8:
             self.animationvar = 0
             if self.state == "sword":
                 self.state = prev_state
@@ -133,7 +136,7 @@ class Player(pygame.sprite.Sprite):
                         if player.actual_rect.right > enemy.actual_rect.x - 200 and player.actual_rect.right < enemy.actual_rect.x - 180:
                             self.image.blit(self.spritesheet, (0, 0), (int(
                                 self.animationvar)*64, 0*64, 64, 64))
-                            self.actual_rect.x += 2
+                            self.actual_rect.x -= 2
                             self.direction = "left"
                         elif player.actual_rect.right > enemy.actual_rect.x - 180:
                             self.image.blit(self.spritesheet, (0, 0), ((
@@ -149,11 +152,15 @@ class Player(pygame.sprite.Sprite):
                         self.direction = "right"
             else:
                 if not self.controller:
-                    self.image.blit(self.spritesheet, (0, 0),
-                                    (int(self.animationvar)*64, 1*64, 64, 64))
+                    if self.grav < 1:
+                        self.image.blit(self.spritesheet, (0, 0),
+                                        (int(self.animationvar)*64, 1*64, 64, 64))
+                    else:
+                        self.image.blit(self.spritesheet, (0, 0),
+                                        (int(self.animationvar)*64, 0*64, 64, 64))
                 else:
                     keys_pressed = pygame.key.get_pressed()
-                    if keys_pressed[K_w]:
+                    if keys_pressed[K_w] and self.grav < 0.5:
                         self.grav = -4
                     if keys_pressed[K_d]:
                         self.direction = "right"
@@ -237,7 +244,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.x = self.actual_rect.x - scroll[0]
         self.rect.y = self.actual_rect.y - scroll[1]
         self.animationvar += 0.2
-        if self.animationvar >= 8:
+        if self.animationvar > 8:
             self.animationvar = 0
             if self.state == "sword":
                 self.state = self.prev_state
@@ -253,7 +260,7 @@ class Enemy(pygame.sprite.Sprite):
                 self.movement[0] = -2
             elif self.direction == "right":
                 self.image.blit(pygame.transform.flip(
-                    self.spritesheet, 1, 0), (0, 0), (int(self.animationvar)*64, 1*64, 64, 64))
+                    self.spritesheet, 1, 0), (0, 0), (((8 - int(self.animationvar)) - 1)*64, 1*64, 64, 64))
                 self.movement[0] = 2
         if self.state == "sword":
             self.image.blit(self.spritesheet, (0, 0),
@@ -329,7 +336,7 @@ class Node:
 class Trigger(pygame.sprite.Sprite):
     def __init__(self):
         super(Trigger, self).__init__()
-        self.rect = Rect(0, 0, 60, 10)
+        self.rect = Rect(0, 0, 64, 16)
         self.actual_rect = self.rect
         self.image = pygame.Surface([60, 10])
         self.image.fill((255, 0, 0))
@@ -373,6 +380,16 @@ connections = []
 def save():
     with open("savefile.json", "w") as savefile:
         json.dump(level, savefile)
+    running = True
+    while True:
+        pygame.display.update()
+        screen.fill((10, 10, 10))
+        write(True, "Level 2 coming soon!", (sw/3, sh/2), (255, 255, 255), 60)
+        for ev in pygame.event.get():
+            if ev.type == QUIT or (ev.type == KEYDOWN and ev.key == K_ESCAPE):
+                running = False
+                pygame.quit()
+                sys.exit()
 # save()
 
 def load():
@@ -383,10 +400,26 @@ def load():
 class Checkpoint(Trigger):
     def __init__(self, x, y):
         super(Checkpoint, self).__init__()
-        self.actual_rect = Rect(x, y, 60, 10)
+        self.actual_rect = Rect(x, y, 64, 16)
+        self.animationvar = 0
+        self.spritesheet = pygame.image.load("checkpoint_flag.png")
+        self.spritesheet = pygame.transform.scale(
+            self.spritesheet, (64*8, 64))
+        self.image = pygame.Surface([64, 64])
+        self.image.blit(self.spritesheet, (0, 0), (0, 0, 64, 64))
+        self.image.set_colorkey((0, 255, 0))
 
     def update(self):
         global scroll
+        self.rect.x = self.actual_rect.x - scroll[0]
+        self.rect.y = self.actual_rect.y - scroll[1]
+        self.animationvar += 0.2
+        if self.animationvar > 8:
+            self.animationvar = 0
+        self.image.fill((0, 255, 0))
+        self.image.blit(self.spritesheet, (0, 0),
+                        (int(self.animationvar)*64, 0, 64, 64))
+        self.image.set_colorkey((0, 255, 0))
         self.rect.x, self.rect.y = self.actual_rect.x - \
             scroll[0], self.actual_rect.y - scroll[1]
         if self.triggerzone(player):
@@ -395,7 +428,7 @@ class Checkpoint(Trigger):
 triggerlist = []
 triggergrp = pygame.sprite.Group()
 for i in range(1):
-    triggerlist.append(Checkpoint(2622, 825))
+    triggerlist.append(Checkpoint(2558, 771))
 for trigger in triggerlist:
     triggergrp.add(trigger)
 
@@ -662,10 +695,10 @@ def gameloop():
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
         if level == 2:
             count += 1
-            if count > 300:
-                write(True, "Press Esc if you are stuck or want to go back to the node graph anytime", (sw/2 - 520, 120), (255, 255, 255), 40)
+            if count > 600:
+                write(True, "[Press Esc if you are stuck or want to go back to the node graph anytime]", (sw/2 - 520, 120), (255, 255, 255), 40)
         pygame.display.update()
-        clock.tick(80)
+        clock.tick(120)
 
 if __name__ == "__main__":
     # main menu
