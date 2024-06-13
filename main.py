@@ -13,6 +13,8 @@ clock = pygame.time.Clock()
 display = pygame.Surface([1000, 600])
 display_rect = Rect(0, 0, 1000, 600)
 
+prev_state = "idle"
+
 with open("tilemap.json", 'r') as tilemap_file:
     tilemap = json.load(tilemap_file)
 
@@ -46,6 +48,7 @@ class Player(pygame.sprite.Sprite):
         self.evade = False
         self.grav = 0
         self.on_ground = False
+        self.prev_state = self.state
         self.hp = 100
         self.attackpower = 10
         self.jumpable = False
@@ -106,10 +109,10 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = self.actual_rect.x - scroll[0]
         self.rect.y = self.actual_rect.y - scroll[1]
         self.animationvar += 0.2
-        if self.animationvar > 8:
+        if self.animationvar >= 8:
             self.animationvar = 0
             if self.state == "sword":
-                self.state = prev_state
+                self.state = self.prev_state
         self.grav += 0.2
         self.image.fill((0, 255, 0))
         if self.state == "idle":
@@ -244,7 +247,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.x = self.actual_rect.x - scroll[0]
         self.rect.y = self.actual_rect.y - scroll[1]
         self.animationvar += 0.2
-        if self.animationvar > 8:
+        if self.animationvar >= 8:
             self.animationvar = 0
             if self.state == "sword":
                 self.state = self.prev_state
@@ -277,6 +280,7 @@ class Node:
             self.inputno = 3
 
         self.anchor = False
+        self.activated = True
         self.selected = False
         self.editedname = False
         self.namespace = pygame.Surface(self.rect.size)
@@ -380,14 +384,12 @@ connections = []
 def save():
     with open("savefile.json", "w") as savefile:
         json.dump(level, savefile)
-    running = True
     while True:
         pygame.display.update()
         screen.fill((10, 10, 10))
         write(True, "Level 2 coming soon!", (sw/3, sh/2), (255, 255, 255), 60)
         for ev in pygame.event.get():
             if ev.type == QUIT or (ev.type == KEYDOWN and ev.key == K_ESCAPE):
-                running = False
                 pygame.quit()
                 sys.exit()
 # save()
@@ -503,7 +505,7 @@ def node_graph():
                                     for rect in node2.inrects:
                                         if rect[0].collidepoint(pygame.mouse.get_pos()) and rect[1] == 0:
                                             connections.append(
-                                                [[node1.outrect[0], rect[0]], [node1.name, node2.name]])
+                                                [[node1.outrect[0], rect[0]], [node1.name, node2.name, node1.activated]])
                                             rect[1] = 1
                                             for connection1 in connections:
                                                 for connection2 in connections:
@@ -544,14 +546,27 @@ def nodes_init(connections):
             if c[1][0] == "Walk":
                 player.state = "walk"
                 for c1 in connections:
-                    if c1[1][1] == "Walk" and c1[1][0] == "WASD":
+                    if c1[1][1] == "Walk" and c1[1][0] == "WASD" and c[1][2] == True:
                         player.controller = True
+                # if c[1][2] == True:
+                #     player.state = "walk"
+                #     for c1 in connections:
+                #         if c1[1][1] == "Walk" and c1[1][0] == "WASD" and c[1][2] == True:
+                #             player.controller = True
+                # else:
+                #     player.state = "idle"
 
-            if c[1][0] == "Evade":
+            player.evade = player.jumpable = False
+            if c[1][0] == "Evade" and c[1][2] == True:
                 player.evade = True
             if c[1][0] == "Sword":
                 player.attributes.append("Sword")
-            if c[1][0] == "Jump":
+                # player.state = "sword"
+                # if c[1][2] == True:
+                #     player.attributes.append("Sword")
+                # else:
+                #     player.attributes.remove("Sword")
+            if c[1][0] == "Jump" and c[1][2] == True:
                 player.jumpable = True
 
 scroll = [0, 0]
@@ -565,10 +580,14 @@ def gameloop():
         enemy.reset()
     nodes_init(connections)
     while running:
+        activerects = [Rect(0, 0, 0, 0),
+                    Rect(0, 0, 0, 0),
+                    Rect(0, 0, 0, 0)]
         sw, sh = pygame.display.Info().current_w, pygame.display.Info().current_h
         scroll[0] += (player.actual_rect.x - scroll[0] - 368)/10
         scroll[1] += (player.actual_rect.y - scroll[1] - 268)/10
         display_rect.x, display_rect.y = scroll[0], scroll[1]
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -577,10 +596,15 @@ def gameloop():
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     running = False
-                    if level == 2 or level == 3:
+                    if 2 <= level <= 3:
                         player.hp = 0
                 if event.key == K_x:
                     print(player.actual_rect.topleft)
+            if event.type == MOUSEBUTTONDOWN:
+                for i in range(len(connections)):
+                    if activerects[i].collidepoint(event.pos):
+                        # connections[i][1][2] = not connections[i][1][2]
+                        pass
 
         # keys_pressed = pygame.key.get_pressed()
         # if keys_pressed[K_SPACE]:
@@ -608,10 +632,9 @@ def gameloop():
                 # player
                 for att in player.attributes:
                     if att == "Sword" and not player.state == "sword":
-                        global prev_state
-                        prev_state = player.state
+                        player.prev_state = player.state
                         player.state = "sword"
-                        player.animationvar = 0
+                        # player.animationvar = 0
                 # enemy
                 if not enemy.state == "sword":
                     enemy.prev_state = enemy.state
@@ -619,6 +642,9 @@ def gameloop():
                 if enemy.animationvar > 4:
                     player.actual_rect.x -= enemy.attackpower*4
                     player.hp -= enemy.attackpower
+                # print("Enemy encountered: " + player.state)
+                # print(player.state)
+                # print(player.animationvar)
                 if player.state == "sword" and player.animationvar > 4:
                     enemy.actual_rect.x += player.attackpower*4
                     enemy.hp -= player.attackpower
@@ -693,9 +719,26 @@ def gameloop():
         triggergrp.update()
 
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
+
+        for i in range(len(connections)):
+            if connections[i][1][2]:
+                pygame.draw.rect(screen, (255, 255, 255), ((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50))
+            else:
+                pygame.draw.rect(screen, (255, 0, 0), ((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50))
+            activerects[i] = Rect((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50)
+
+        # for node in nodes:
+        #     for i in range(len(connections)):
+        #         if node.name == connections[i][1][0]:
+        #             node.activated = connections[i][1][2]
+        nodes_init(connections)
+        # if player.state == "sword":
+        #     print("state:"+player.state)
+        # print(connections[0][1][2], nodes[1].activated)
+
         if level == 2:
             count += 1
-            if count > 600:
+            if count > 500:
                 write(True, "[Press Esc if you are stuck or want to go back to the node graph anytime]", (sw/2 - 520, 120), (255, 255, 255), 40)
         pygame.display.update()
         clock.tick(120)
