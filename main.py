@@ -544,9 +544,12 @@ def nodes_init(connections):
     for c in connections:
         if c[1][1] == "Player":
             if c[1][0] == "Walk":
-                player.state = "walk"
+                if c[1][2]:
+                    player.state = "walk"
+                else:
+                    player.state = "idle"
                 for c1 in connections:
-                    if c1[1][1] == "Walk" and c1[1][0] == "WASD" and c[1][2] == True:
+                    if c1[1][1] == "Walk" and c1[1][0] == "WASD" and c[1][2]:
                         player.controller = True
                 # if c[1][2] == True:
                 #     player.state = "walk"
@@ -561,11 +564,6 @@ def nodes_init(connections):
                 player.evade = True
             if c[1][0] == "Sword":
                 player.attributes.append("Sword")
-                # player.state = "sword"
-                # if c[1][2] == True:
-                #     player.attributes.append("Sword")
-                # else:
-                #     player.attributes.remove("Sword")
             if c[1][0] == "Jump" and c[1][2] == True:
                 player.jumpable = True
 
@@ -579,10 +577,8 @@ def gameloop():
     for enemy in enemylist:
         enemy.reset()
     nodes_init(connections)
+    activerects = [Rect(0, 0, 0, 0)]
     while running:
-        activerects = [Rect(0, 0, 0, 0),
-                    Rect(0, 0, 0, 0),
-                    Rect(0, 0, 0, 0)]
         sw, sh = pygame.display.Info().current_w, pygame.display.Info().current_h
         scroll[0] += (player.actual_rect.x - scroll[0] - 368)/10
         scroll[1] += (player.actual_rect.y - scroll[1] - 268)/10
@@ -601,10 +597,9 @@ def gameloop():
                 if event.key == K_x:
                     print(player.actual_rect.topleft)
             if event.type == MOUSEBUTTONDOWN:
-                for i in range(len(connections)):
+                for i in range(len(activerects)):
                     if activerects[i].collidepoint(event.pos):
-                        # connections[i][1][2] = not connections[i][1][2]
-                        pass
+                        connections[i][1][2] = not connections[i][1][2]
 
         # keys_pressed = pygame.key.get_pressed()
         # if keys_pressed[K_SPACE]:
@@ -720,17 +715,18 @@ def gameloop():
 
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
 
-        for i in range(len(connections)):
+        for i in range(len(activerects)):
+            # print(connections[i][1][2])
             if connections[i][1][2]:
                 pygame.draw.rect(screen, (255, 255, 255), ((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50))
             else:
                 pygame.draw.rect(screen, (255, 0, 0), ((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50))
             activerects[i] = Rect((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50)
 
-        # for node in nodes:
-        #     for i in range(len(connections)):
-        #         if node.name == connections[i][1][0]:
-        #             node.activated = connections[i][1][2]
+        for node in nodes:
+            for i in range(len(activerects)):
+                if node.name == connections[i][1][0]:
+                    node.activated = connections[i][1][2]
         nodes_init(connections)
         # if player.state == "sword":
         #     print("state:"+player.state)
