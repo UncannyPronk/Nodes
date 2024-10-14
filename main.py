@@ -476,7 +476,8 @@ def node_graph():
                 #             node.name += event.unicode
             if event.type == MOUSEBUTTONDOWN:
                 if Rect(sw - 100, 30, 40, 40).collidepoint(event.pos):
-                    gameloop()
+                    tutorial()
+                    chapter1()
                 else:
                     for i in range(len(nodes_avail)):
                         if hover[i]:
@@ -548,9 +549,9 @@ def nodes_init(connections):
                     player.state = "walk"
                 else:
                     player.state = "idle"
-                for c1 in connections:
-                    if c1[1][1] == "Walk" and c1[1][0] == "WASD" and c[1][2]:
-                        player.controller = True
+                # for c1 in connections:
+                #     if c1[1][1] == "Walk" and c1[1][0] == "WASD" and c[1][2]:
+                #         player.controller = True
                 # if c[1][2] == True:
                 #     player.state = "walk"
                 #     for c1 in connections:
@@ -559,7 +560,7 @@ def nodes_init(connections):
                 # else:
                 #     player.state = "idle"
 
-            player.evade = player.jumpable = False
+            # player.evade = player.jumpable = False
             if c[1][0] == "Evade" and c[1][2] == True:
                 player.evade = True
             if c[1][0] == "Sword":
@@ -569,7 +570,7 @@ def nodes_init(connections):
 
 scroll = [0, 0]
 
-def gameloop():
+def tutorial():
     running = True
     count = 0
     global level
@@ -715,18 +716,19 @@ def gameloop():
 
         screen.blit(pygame.transform.scale(display, (sw, sh)), (0, 0))
 
-        for i in range(len(activerects)):
-            # print(connections[i][1][2])
-            if connections[i][1][2]:
-                pygame.draw.rect(screen, (255, 255, 255), ((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50))
-            else:
-                pygame.draw.rect(screen, (255, 0, 0), ((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50))
-            activerects[i] = Rect((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50)
-
-        for node in nodes:
+        if len(connections) > 0:
             for i in range(len(activerects)):
-                if node.name == connections[i][1][0]:
-                    node.activated = connections[i][1][2]
+                # print(connections[i][1][2])
+                if connections[i][1][2]:
+                    pygame.draw.rect(screen, (255, 255, 255), ((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50))
+                else:
+                    pygame.draw.rect(screen, (255, 0, 0), ((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50))
+                activerects[i] = Rect((sw/2 + i*100)-(len(connections)*50 - 25), sh - 200, 50, 50)
+
+            for node in nodes:
+                for i in range(len(activerects)):
+                    if node.name == connections[i][1][0]:
+                        node.activated = connections[i][1][2]
         nodes_init(connections)
         # if player.state == "sword":
         #     print("state:"+player.state)
@@ -738,6 +740,9 @@ def gameloop():
                 write(True, "[Press Esc if you are stuck or want to go back to the node graph anytime]", (sw/2 - 520, 120), (255, 255, 255), 40)
         pygame.display.update()
         clock.tick(120)
+
+def chapter1():
+    pass
 
 if __name__ == "__main__":
     # main menu
