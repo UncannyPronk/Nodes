@@ -34,29 +34,32 @@ class Object(pygame.sprite.Sprite):
 class Tree(Object):
     def __init__(self, x, y):
         Object.__init__(self)
-        self.image = pygame.Surface((128, 224))
-        self.image.fill((0, 255, 100))
+        self.image = pygame.Surface((64, 32))
+        self.image.fill((255, 255, 0))
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.irect = self.rect
-        self.hitbox = self.HitBox(self)
+        self.sprite = self.Sprite(self)
     
     def update(self, **kwargs):
         self.rect.x = self.irect.x - scroll[0]
         self.rect.y = self.irect.y - scroll[1]
 
-    class HitBox(pygame.sprite.Sprite):
+    class Sprite(pygame.sprite.Sprite):
         def __init__(self, Tree):
             pygame.sprite.Sprite.__init__(self)
-            self.image = pygame.Surface((64, 32))
-            self.image.fill((255, 255, 0))
+            self.image = pygame.Surface((128, 224))
             self.rect = self.image.get_rect()
+            self.image.fill((255, 0, 0))
+            self.spriteimg = pygame.image.load("pixel_trees/pixel_trees/pixel_tree_summer.png")
+            self.image.blit(pygame.transform.scale(self.spriteimg, (self.rect.w, self.rect.h)), (0, 0))
+            self.image.set_colorkey((255, 0, 0))
             self.outer = Tree
         
         def update(self, **kwargs):
-            self.rect.x = self.outer.rect.x + 32
-            self.rect.y = self.outer.rect.bottom - 32
+            self.rect.x = self.outer.rect.x - 32 - scroll[0]
+            self.rect.bottom = self.outer.rect.bottom - scroll[1]
 #endregion
 
 #region[rgb(50, 30, 30)]
@@ -125,20 +128,59 @@ class Player(pygame.sprite.Sprite):
             pygame.sprite.Sprite.__init__(self)
             self.image = pygame.Surface((32, 64))
             self.image.fill((0, 0, 0))
+            self.animationvar = 0
+            self.spritesheet = pygame.image.load("8Direction_TopDown_CharacterAssets_ByBossNelNel/8Direction_TopDown_Character Sprites_ByBossNelNel/SpriteSheet.png")
             self.rect = self.image.get_rect()
             # self.irect = self.rect
             self.outer = Player
         
         def update(self, **kwargs):
+            if self.animationvar < 8:
+                self.animationvar += 0.2
+            else:
+                self.animationvar = 0
+            self.image.fill((0, 255, 0))
+            if self.outer.movement[1] > 0:
+                if self.outer.movement[0] > 0:
+                    #bottom right
+                    self.image.blit(pygame.transform.scale(self.spritesheet, (self.rect.w*9, self.rect.h*9)), (0, 0), (int(self.animationvar)*self.rect.w, self.rect.h, self.rect.w, self.rect.h))
+                elif self.outer.movement[0] < 0:
+                    #bottom left
+                    self.image.blit(pygame.transform.scale(self.spritesheet, (self.rect.w*9, self.rect.h*9)), (0, 0), (int(self.animationvar)*self.rect.w, self.rect.h*7, self.rect.w, self.rect.h))
+                else:
+                    #bottom
+                    self.image.blit(pygame.transform.scale(self.spritesheet, (self.rect.w*9, self.rect.h*9)), (0, 0), (int(self.animationvar)*self.rect.w, 0, self.rect.w, self.rect.h))
+            elif self.outer.movement[1] < 0:
+                if self.outer.movement[0] > 0:
+                    #top right
+                    self.image.blit(pygame.transform.scale(self.spritesheet, (self.rect.w*9, self.rect.h*9)), (0, 0), (int(self.animationvar)*self.rect.w, self.rect.h*3, self.rect.w, self.rect.h))
+                elif self.outer.movement[0] < 0:
+                    #top left
+                    self.image.blit(pygame.transform.scale(self.spritesheet, (self.rect.w*9, self.rect.h*9)), (0, 0), (int(self.animationvar)*self.rect.w, self.rect.h*5, self.rect.w, self.rect.h))
+                else:
+                    #top
+                    self.image.blit(pygame.transform.scale(self.spritesheet, (self.rect.w*9, self.rect.h*9)), (0, 0), (int(self.animationvar)*self.rect.w, self.rect.h*4, self.rect.w, self.rect.h))
+            else:
+                if self.outer.movement[0] > 0:
+                    #right
+                    self.image.blit(pygame.transform.scale(self.spritesheet, (self.rect.w*9, self.rect.h*9)), (0, 0), (int(self.animationvar)*self.rect.w, self.rect.h*2, self.rect.w, self.rect.h))
+                elif self.outer.movement[0] < 0:
+                    #left
+                    self.image.blit(pygame.transform.scale(self.spritesheet, (self.rect.w*9, self.rect.h*9)), (0, 0), (int(self.animationvar)*self.rect.w, self.rect.h*6, self.rect.w, self.rect.h))
+                else:
+                    #idle
+                    self.image.blit(pygame.transform.scale(self.spritesheet, (self.rect.w*9, self.rect.h*9)), (0, 0), (0, 0, self.rect.w, self.rect.h))
+            self.image.set_colorkey((0, 255, 0))
             self.rect.x = self.outer.rect.x - 4
             self.rect.bottom = self.outer.rect.bottom
-            self.image.fill((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+            # self.image.fill((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+
 #endregion
 
 PlayerGroup = pygame.sprite.Group()
 EnemyGroup = pygame.sprite.Group()
 ObjectGroup = pygame.sprite.Group()
-HitBoxGroup = pygame.sprite.Group()
+SpriteGroup = pygame.sprite.Group()
 
 #region[rgb(30, 30, 30)]
 def gameloop(loadgame=0):
@@ -147,6 +189,7 @@ def gameloop(loadgame=0):
 
     player = Player()
     player.add(PlayerGroup)
+    player.sprite.add(SpriteGroup)
     # player.hitbox.add(HitBoxGroup)
     player.sprite.rect.center = 500, 400
     pygame.mouse.set_pos(500, 400)
@@ -156,15 +199,15 @@ def gameloop(loadgame=0):
         enemylist.append(Character(random.randint(-800, 800), random.randint(-800, 800)))
     for enemy in enemylist:
         enemy.hostile = True
-        enemy.sprite.add(EnemyGroup)
-        enemy.add(HitBoxGroup)
+        enemy.add(EnemyGroup)
+        enemy.sprite.add(SpriteGroup)
 
     trees = []
     for i in range(8):
         trees.append(Tree(random.randint(-800, 800), random.randint(-800, 800)))
     for tree in trees:
         tree.add(ObjectGroup)
-        tree.hitbox .add(HitBoxGroup)
+        tree.sprite.add(SpriteGroup)
         # print(tree.rect.topleft)
 
     running = True
@@ -176,6 +219,20 @@ def gameloop(loadgame=0):
     bg = pygame.Surface((display_rect.w, display_rect.h))
     bg.fill((0, 0, 0))
     bg.set_alpha(0)
+
+    def blit(group):
+        order = []
+        for item in group:
+            order.append(item)
+        n = len(order)
+        for i in range(n):
+            for j in range(0, n-i-1):
+                if order[j].outer.rect.y > order[j+1].outer.rect.y:
+                    order[j], order[j+1] = order[j+1], order[j]
+
+        for i in range(n):
+            screen.blit(order[i].image, order[i].rect)
+
     #endregion
 
     #region
@@ -280,22 +337,12 @@ def gameloop(loadgame=0):
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_a or ev.key == pygame.K_s or ev.key == pygame.K_d:
                     pygame.mouse.set_pos(500, 650)
-        screen.fill((255, 255, 255))
-        ObjectGroup.update(); ObjectGroup.draw(screen)
-        EnemyGroup.update(); EnemyGroup.draw(screen)
-        player.sprite.update(); screen.blit(player.sprite.image, (player.sprite.rect.x - scroll[0], player.sprite.rect.y - scroll[1]))
-        PlayerGroup.update(); PlayerGroup.draw(screen)
-        HitBoxGroup.update(); HitBoxGroup.draw(screen)
-        # for object in ObjectGroup:
-        #     if player.rect.colliderect(object.rect):
-        #         if player.rect.center[0] < object.rect.center[0]:
-        #             player.rect.right = object.rect.x
-        #         elif player.rect.center[0] > object.rect.center[0]:
-        #             player.rect.x = object.rect.right
-        #         if player.rect.center[1] < object.rect.center[1]:
-        #             player.rect.bottom = object.rect.y
-        #         elif player.rect.center[1] > object.rect.center[1]:
-        #             player.rect.y = object.rect.bottom
+        screen.fill((0, 255, 120))
+        blit(SpriteGroup)
+        ObjectGroup.update()
+        EnemyGroup.update()
+        PlayerGroup.update()
+        SpriteGroup.update()
         
         mx, my = pygame.mouse.get_pos()
         keys_pressed = pygame.key.get_pressed()
@@ -320,46 +367,63 @@ def gameloop(loadgame=0):
             player.detectablebyenemies = 100
         #region
         if not player.irect.collidepoint(mx, my) and not in_menu:
-            if player.irect.center[0] < mx:
+            if player.irect.right < mx:
                 if player.movement[0] < 2:
                     player.movement[0] += (mx - player.irect.center[0])/800
                 if player.sprint:
-                    if player.movement[0] < 8:
+                    if player.movement[0] < 6:
                         player.movement[0] += (mx - player.irect.center[0])/800
                 else:
                     if player.movement[0] > 2:
                         player.movement[0] -= 0.5
                 # print(mx - player.irect.center[0])
-            if player.irect.center[0] > mx:
+            elif player.irect.x > mx:
                 if player.movement[0] > -2:
                     player.movement[0] -= (player.irect.center[0] - mx)/800
                 if player.sprint:
-                    if player.movement[0] > -8:
+                    if player.movement[0] > -6:
                         player.movement[0] -= (player.irect.center[0] - mx)/800
                 else:
                     if player.movement[0] < -2:
                         player.movement[0] += 0.5
                 # print(player.irect.center[0] - mx)
-            if player.irect.center[1] < my:
+            else:
+                # print(player.movement[0])
+                if 2 > player.movement[0] > 0:
+                    player.movement[0] -= 0.5
+                if -2 < player.movement[0] < 0:
+                    player.movement[0] += 0.5
+                if player.movement[0] < 0.5 or player.movement[0] > -0.5:
+                    player.movement[0] = 0
+
+            if player.irect.bottom < my:
                 if player.movement[1] < 2:
                     player.movement[1] += (my - player.irect.center[1])/800
                 if player.sprint:
-                    if player.movement[1] < 8:
+                    if player.movement[1] < 6:
                         player.movement[1] += (my - player.irect.center[1])/800
                 else:
                     if player.movement[1] > 2:
                         player.movement[1] -= 0.5
                 # print(my - player.irect.center[1])
-            if player.irect.center[1] > my:
+            elif player.irect.y > my:
                 if player.movement[1] > -2:
                     player.movement[1] -= (player.irect.center[1] - my)/800
                 if player.sprint:
-                    if player.movement[1] > -8:
+                    if player.movement[1] > -6:
                         player.movement[1] -= (player.irect.center[1] - my)/800
                 else:
                     if player.movement[1] < -2:
                         player.movement[1] += 0.5
                 # print(player.irect.center[1] - my)
+            else:
+                # print(player.movement[1])
+                if 2 > player.movement[1] > 0:
+                    player.movement[1] -= 0.5
+                if -2 < player.movement[1] < 0:
+                    player.movement[1] += 0.5
+                if player.movement[1] < 0.5 or player.movement[1] > -0.5:
+                    player.movement[1] = 0
         else:
             player.movement = [0, 0]
         #endregion
@@ -367,7 +431,7 @@ def gameloop(loadgame=0):
         pcollside = {"front": False, "back": False, "left": False, "right": False}
         player.irect.x += player.movement[0]
         #region[rgb(72, 0, 0)]
-        ecoll = pygame.sprite.spritecollide(player, HitBoxGroup, False)
+        ecoll = pygame.sprite.spritecollide(player, EnemyGroup, False)
         for coll in ecoll:
             if coll.type == "npc":
                 if coll.hostile:
@@ -386,11 +450,14 @@ def gameloop(loadgame=0):
                     #     player.movement[0] = -player.movement[0]
                     #     player.movement[1] = -player.movement[1]
                     if coll.hp <= 0:
-                        HitBoxGroup.remove(coll)
-                        EnemyGroup.remove(coll.sprite)
+                        SpriteGroup.remove(coll.sprite)
+                        EnemyGroup.remove(coll)
                         break
         #endregion
-        pcoll = pygame.sprite.spritecollide(player, HitBoxGroup, False)
+        pcoll = pygame.sprite.spritecollide(player, ObjectGroup, False)
+        for enemy in pygame.sprite.spritecollide(player, EnemyGroup, False):
+            pcoll.append(enemy)
+        # print(pcoll)
         for coll in pcoll:
             if player.movement[0] > 0:
                 pcollside["right"] = True
@@ -398,9 +465,10 @@ def gameloop(loadgame=0):
             elif player.movement[0] < 0:
                 pcollside["left"] = True
                 player.rect.x = coll.rect.right
+
         player.irect.y += player.movement[1]
         #region[rgb(72, 0, 0)]
-        ecoll = pygame.sprite.spritecollide(player, HitBoxGroup, False)
+        ecoll = pygame.sprite.spritecollide(player, EnemyGroup, False)
         for coll in ecoll:
             if coll.type == "npc":
                 if coll.hostile:
@@ -419,11 +487,14 @@ def gameloop(loadgame=0):
                     #     player.movement[0] = -player.movement[0]
                     #     player.movement[1] = -player.movement[1]
                     if coll.hp <= 0:
-                        HitBoxGroup.remove(coll)
-                        EnemyGroup.remove(coll.sprite)
+                        SpriteGroup.remove(coll.sprite)
+                        EnemyGroup.remove(coll)
                         break
         #endregion
-        pcoll = pygame.sprite.spritecollide(player, HitBoxGroup, False)
+        pcoll = pygame.sprite.spritecollide(player, ObjectGroup, False)
+        for enemy in pygame.sprite.spritecollide(player, EnemyGroup, False):
+            pcoll.append(enemy)
+        # print(pcoll)
         for coll in pcoll:
             if player.movement[1] > 0:
                 pcollside["back"] = True
