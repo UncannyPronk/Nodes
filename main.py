@@ -114,7 +114,7 @@ class Player(pygame.sprite.Sprite):
         self.inv2 = ["Gun"]
         self.active2 = -1
         #long range weapons
-        self.inv3 = ["Wind"]
+        self.inv3 = ["Wind", "Build"]
         self.active3 = -1
 
     def update(self, **kwargs):
