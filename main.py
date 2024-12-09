@@ -244,7 +244,7 @@ def gameloop(loadgame=0):
         if player.active1 > -1:
             for i in range(len(player.inv1)):
                 if player.active1 == i:
-                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 100*i, 200), 8)
+                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
         pygame.draw.rect(screen, (100, 100, 100), (400, 600, 200, 100))
         if Rect(400, 600, 200, 100).collidepoint(pygame.mouse.get_pos()) and player.active1 != -1:
             write(text="Player", position=(425, 610), fontsize=60, color=(255, 255, 255))
@@ -254,13 +254,13 @@ def gameloop(loadgame=0):
             write(text="Player", position=(425, 610), fontsize=60)
 
         for i in range(len(player.inv1)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 100*i, 200, 200, 100))
+            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
             if Rect(50 + 100*i, 200, 200, 100).collidepoint(pygame.mouse.get_pos()):
-                write(text=player.inv1[i], position=(75 + 100*i, 210), fontsize=60, color=(255, 255, 255))
+                write(text=player.inv1[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
                 if pygame.mouse.get_pressed()[0]:
                     player.active1 = i
             else:
-                write(text=player.inv1[i], position=(75 + 100*i, 210), fontsize=60)
+                write(text=player.inv1[i], position=(75 + 300*i, 210), fontsize=60)
         pygame.draw.line(screen, (255, 255, 255), (500, 600), pygame.mouse.get_pos(), 3)
     def menu2():
         if bg.get_alpha() < 200:
@@ -270,7 +270,7 @@ def gameloop(loadgame=0):
         if player.active2 > -1:
             for i in range(len(player.inv2)):
                 if player.active2 == i:
-                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 100*i, 200), 8)
+                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
         pygame.draw.rect(screen, (100, 100, 100), (400, 600, 200, 100))
         if Rect(400, 600, 200, 100).collidepoint(pygame.mouse.get_pos()) and player.active2 != -1:
             write(text="Player", position=(425, 610), fontsize=60, color=(255, 255, 255))
@@ -280,13 +280,13 @@ def gameloop(loadgame=0):
             write(text="Player", position=(425, 610), fontsize=60)
 
         for i in range(len(player.inv2)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 100*i, 200, 200, 100))
+            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
             if Rect(50 + 100*i, 200, 200, 100).collidepoint(pygame.mouse.get_pos()):
-                write(text=player.inv2[i], position=(75 + 100*i, 210), fontsize=60, color=(255, 255, 255))
+                write(text=player.inv2[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
                 if pygame.mouse.get_pressed()[0]:
                     player.active2 = i
             else:
-                write(text=player.inv2[i], position=(75 + 100*i, 210), fontsize=60)
+                write(text=player.inv2[i], position=(75 + 300*i, 210), fontsize=60)
         pygame.draw.line(screen, (255, 255, 255), (500, 600), pygame.mouse.get_pos(), 3)
     def menu3():
         if bg.get_alpha() < 200:
@@ -296,7 +296,7 @@ def gameloop(loadgame=0):
         if player.active3 > -1:
             for i in range(len(player.inv3)):
                 if player.active3 == i:
-                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 100*i, 200), 8)
+                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
         pygame.draw.rect(screen, (100, 100, 100), (400, 600, 200, 100))
         if Rect(400, 600, 200, 100).collidepoint(pygame.mouse.get_pos()) and player.active3 != -1:
             write(text="Player", position=(425, 610), fontsize=60, color=(255, 255, 255))
@@ -306,13 +306,13 @@ def gameloop(loadgame=0):
             write(text="Player", position=(425, 610), fontsize=60)
 
         for i in range(len(player.inv3)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 100*i, 200, 200, 100))
+            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
             if Rect(50 + 100*i, 200, 200, 100).collidepoint(pygame.mouse.get_pos()):
-                write(text=player.inv3[i], position=(75 + 100*i, 210), fontsize=60, color=(255, 255, 255))
+                write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
                 if pygame.mouse.get_pressed()[0]:
                     player.active3 = i
             else:
-                write(text=player.inv3[i], position=(75 + 100*i, 210), fontsize=60)
+                write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60)
         pygame.draw.line(screen, (255, 255, 255), (500, 600), pygame.mouse.get_pos(), 3)
     def status():
         if bg.get_alpha() < 200:
