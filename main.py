@@ -1,4 +1,4 @@
-import pygame, sys, random, winsound
+import pygame, sys, random, cmath
 from pygame import *
 from pygame.locals import *
 
@@ -20,6 +20,12 @@ def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fonts
         return rect
     else:
         return text, position
+
+PlayerGroup = pygame.sprite.Group()
+EnemyGroup = pygame.sprite.Group()
+ObjectGroup = pygame.sprite.Group()
+VillageGroup = pygame.sprite.Group()
+SpriteGroup = pygame.sprite.Group()
 
 #region[rgba(0, 0, 0, 0.6)]
 class Object(pygame.sprite.Sprite):
@@ -52,6 +58,7 @@ class Tree(Object):
         def __init__(self, Tree):
             pygame.sprite.Sprite.__init__(self)
             self.image = pygame.Surface((128, 224))
+            self.collidable = True
             self.rect = self.image.get_rect()
             self.image.fill((255, 0, 0))
             self.spriteimg = pygame.image.load("pixel_trees/pixel_trees/pixel_tree_summer.png")
@@ -87,6 +94,7 @@ class Character(pygame.sprite.Sprite):
         def __init__(self, Character):
             pygame.sprite.Sprite.__init__(self)
             self.image = pygame.Surface((32, 64))
+            self.collidable = True
             self.image.fill((0, 0, 0))
             self.rect = self.image.get_rect()
             self.outer = Character
@@ -100,11 +108,11 @@ class Character(pygame.sprite.Sprite):
 class Village(Object):
     def __init__(self, x, y):
         Object.__init__(self)
-        self.image = pygame.Surface((1570, 1664))
+        self.image = pygame.Surface((1570, 1536))
         self.image.fill((255, 255, 0))
         self.rect = self.image.get_rect()
         self.rect.x = x
-        self.rect.y = y - 128
+        self.rect.y = y
         self.irect = self.rect
         self.houses = []
         self.villagers = []
@@ -114,92 +122,124 @@ class Village(Object):
         self.rect.x = self.irect.x - scroll[0]
         self.rect.y = self.irect.y - scroll[1]
         for villager in self.villagers:
-            villager.mv -= 1
+            villager.mv -= random.randint(1, 10)
             if villager.mv <= 0:
                 villager.mv = 400
-                villager.movement = [random.randint(-1, 1)/2, random.randint(-1, 1)/2]
-                if not villager.rect.colliderect(self.rect):
-                    villager.movement[0] = -villager.movement[0]
-                    villager.movement[1] = -villager.movement[1]
-                for house in self.houses:
-                    if villager.rect.colliderect(house.sprite.rect):
-                        villager.movement[0] = -villager.movement[0]
-                        villager.movement[1] = -villager.movement[1]
+                villager.movement = [random.randint(-1, 1), random.randint(-1, 1)]
+            if villager.rect.x < self.sprite.rect.x + 16:
+                villager.rect.x = self.sprite.rect.x + 16
+                villager.movement[0] = 1
+            elif villager.rect.right > self.sprite.rect.right - 16:
+                villager.rect.right = self.sprite.rect.right - 16
+                villager.movement[0] = -1
+            if villager.rect.y < self.sprite.rect.y + 144:
+                villager.rect.y = self.sprite.rect.y + 144
+                villager.movement[1] = 1
+            elif villager.rect.bottom > self.sprite.rect.bottom - 16:
+                villager.rect.bottom = self.sprite.rect.bottom - 16
+                villager.movement[1] = -1
             # print(villager.mv, " --- ", villager.movement, " - ", villager.sprite.rect.topleft)
 
-            pcollside = {"front": False, "back": False, "left": False, "right": False}
+            #region[rgba(180, 40, 0, 0.2)]
+            vcollside = {"front": False, "back": False, "left": False, "right": False}
             villager.irect.x += villager.movement[0]
-            pcoll = pygame.sprite.spritecollide(villager, self.houses, False)
-            for coll in pcoll:
+            # vcoll = pygame.sprite.spritecollide(villager, self.houses, False)
+            vcoll = []
+            for house in self.houses:
+                if villager.rect.colliderect(house.rect):
+                    vcoll.append(house)
+                if villager.rect.colliderect(player.rect):
+                    vcoll.append(player)
+                    # print(house)
+            for coll in vcoll:
                 if villager.movement[0] > 0:
-                    pcollside["right"] = True
+                    vcollside["right"] = True
                     villager.rect.right = coll.rect.x
+                    villager.movement[0] = -1
                 elif villager.movement[0] < 0:
-                    pcollside["left"] = True
+                    vcollside["left"] = True
                     villager.rect.x = coll.rect.right
+                    villager.movement[0] = 1
 
             villager.irect.y += villager.movement[1]
-            pcoll = pygame.sprite.spritecollide(villager, self.houses, False)
-            for coll in pcoll:
+            # vcoll = pygame.sprite.spritecollide(villager, self.houses, False)
+            vcoll = []
+            for house in self.houses:
+                if villager.rect.colliderect(house.rect):
+                    vcoll.append(house)
+                if villager.rect.colliderect(player.rect):
+                    vcoll.append(player)
+                    # print(house)
+            for coll in vcoll:
                 if villager.movement[1] > 0:
-                    pcollside["back"] = True
+                    vcollside["back"] = True
                     villager.rect.bottom = coll.rect.y
+                    villager.movement[1] = -1
                 elif villager.movement[1] < 0:
-                    pcollside["front"] = True
+                    vcollside["front"] = True
                     villager.rect.y = coll.rect.bottom
-            villager.rect.x = villager.irect.x# - scroll[0]
-            villager.rect.y = villager.irect.y# - scroll[1]
+                    villager.movement[1] = 1
+            #endregion
+            # villager.rect.x = villager.irect.x
+            # villager.rect.y = villager.irect.y
+            # villager.sprite.rect.x = villager.rect.x + 4 + scroll[0]
+            # villager.sprite.rect.bottom = villager.rect.bottom + scroll[1]
 
     class Sprite(pygame.sprite.Sprite):
         def __init__(self, Village):
             pygame.sprite.Sprite.__init__(self)
             self.outer = Village
+            self.collidable = False
             self.image = pygame.Surface((1570, 1664))
             self.rect = self.image.get_rect()
             self.image.fill((120, 180, 140))
             for i in range(random.randint(4, 8)):
-                self.outer.houses.append(self.outer.House(self.outer, random.randint(0, 25)//5*256 + 16, (random.randint(0, 25)//5*256 - 16)))
+                self.outer.houses.append(self.outer.House(self.outer, self.outer.rect.x + random.randint(0, 25)//5*256 - 16, self.outer.rect.y + random.randint(0, 25)//5*256 + 16 + 256))
             for i in range(len(self.outer.houses)):
                 for j in range(len(self.outer.houses)):
                     if i != j:
                         while self.outer.houses[i].rect.colliderect(self.outer.houses[j].rect):
-                            self.outer.houses[i].rect.x = random.randint(0, 25)//5*256 + 16
-                            self.outer.houses[i].rect.y = random.randint(0, 25)//5*256 - 16
+                            self.outer.houses[i].rect.x = self.outer.rect.x + random.randint(0, 25)//5*256 - 16
+                            self.outer.houses[i].rect.y = self.outer.rect.y + random.randint(0, 25)//5*256 + 16 + 256
             for i in range(random.randint(6, 12)):
-                self.outer.villagers.append(self.outer.Villager(self.outer, random.randint(16, 1508), random.randint(128, 1584)))
-
+                self.outer.villagers.append(self.outer.Villager(self.outer, random.randint(self.outer.rect.x + 18, self.outer.rect.right - 18), random.randint(self.outer.rect.y + 18, self.outer.rect.bottom - 18)))
             for villager in self.outer.villagers:
                 while villager.rect.collidelist(self.outer.houses):
-                        # villager.rect.x = random.randint(16, 1508)
-                        villager.rect.x = random.randint(16, 1508)
-                        # villager.rect.y = random.randint(144, 1584)
-                        villager.rect.y = random.randint(144, 1584)
+                        villager.rect.x = random.randint(self.outer.rect.x + 18, self.outer.rect.right - 18)
+                        villager.rect.y = random.randint(self.outer.rect.y + 18, self.outer.rect.bottom - 18)
             for i in range(len(self.outer.villagers)):
                 for j in range(len(self.outer.villagers)):
                     if i != j:
                         while self.outer.villagers[i].rect.colliderect(self.outer.villagers[j].rect):
-                            self.outer.villagers[i].rect.x = random.randint(16, 1508)
-                            self.outer.villagers[i].rect.y = random.randint(144, 1584)
+                            self.outer.villagers[i].rect.x = random.randint(self.outer.rect.x + 18, self.outer.rect.right - 18)
+                            self.outer.villagers[i].rect.y = random.randint(self.outer.rect.y + 18, self.outer.rect.bottom - 18)
             self.image.set_alpha(160)
         
         def update(self, **kwargs):
             self.rect.x = self.outer.rect.x - 32 - scroll[0]
-            self.rect.bottom = self.outer.rect.bottom - scroll[1]
+            self.rect.y = self.outer.rect.y + 256 - scroll[1]
             for villager in self.outer.villagers:
-                villager.sprite.rect.x = villager.rect.x
-                villager.sprite.rect.y = villager.rect.y
-            self.image.fill((120, 180, 140))
-            pygame.draw.rect(self.image, (255, 200, 0), (0, 128, self.rect.width, self.rect.height-128), 16)
+                villager.rect.x = villager.irect.x - scroll[0]
+                villager.rect.y = villager.irect.y - scroll[1]
+                villager.sprite.rect.x = villager.rect.x - 4
+                villager.sprite.rect.bottom = villager.rect.bottom
             for house in self.outer.houses:
-                pygame.draw.rect(self.image, (255, 0, 0), house.sprite.rect)
-            for villager in self.outer.villagers:
-                pygame.draw.rect(self.image, (0, 0, 255), villager.sprite.rect)
+                house.rect.x = house.irect.x - scroll[0]
+                house.rect.y = house.irect.y - scroll[1]
+                house.sprite.rect.x = house.rect.x - 16
+                house.sprite.rect.bottom = house.rect.bottom
+            self.image.fill((120, 180, 140))
+            pygame.draw.rect(self.image, (255, 200, 0), (0, 0, self.rect.width, self.rect.height), 16)
+            # for house in self.outer.houses:
+            #     pygame.draw.rect(self.image, (255, 0, 0), house.sprite.rect)
+            # for villager in self.outer.villagers:
+            #     pygame.draw.rect(self.image, (0, 0, 20), villager.sprite.rect)
 
     class House(Object):
         def __init__(self, Village, x, y):
             Object.__init__(self)
             self.village = Village
-            self.image = pygame.Surface((256, 128))
+            self.image = pygame.Surface((224, 256))
             self.image.fill((255, 255, 0))
             self.rect = self.image.get_rect()
             self.rect.x = x
@@ -217,12 +257,13 @@ class Village(Object):
                 self.outer = House
                 self.image = pygame.Surface((256, 384))
                 self.rect = self.image.get_rect()
-                self.rect.x = self.outer.rect.x
-                self.rect.y = self.outer.rect.y
-                self.image.fill((255, 0, 0))
-                # self.spriteimg = pygame.image.load("pixel_trees/pixel_trees/pixel_tree_summer.png")
-                # self.image.blit(pygame.transform.scale(self.spriteimg, (self.rect.w, self.rect.h)), (0, 0))
-                # self.image.set_colorkey((255, 0, 0))
+                # self.rect.x = self.outer.rect.x
+                # self.rect.y = self.outer.rect.y
+                # self.image.fill((255, 0, 0))
+                self.spriteimg = pygame.image.load("house.png")
+                self.image.blit(pygame.transform.scale(self.spriteimg, (self.rect.w, self.rect.h)), (0, 0))
+                key = self.spriteimg.get_at((0, 0))
+                self.image.set_colorkey(key)
             
             # def update(self, **kwargs):
             #     self.rect.x = self.outer.rect.x
@@ -248,7 +289,7 @@ class Village(Object):
                 pygame.sprite.Sprite.__init__(self)
                 self.outer = Villager
                 self.image = pygame.Surface((32, 64))
-                self.image.fill((0, 0, 0))
+                self.image.fill((0, 80, 255))
                 self.rect = self.image.get_rect()
                 self.rect.x = self.outer.rect.x
                 self.rect.y = self.outer.rect.y
@@ -269,6 +310,13 @@ class Player(pygame.sprite.Sprite):
         self.movement = [0, 0]
         self.hp = 100
         self.detectablebyenemies = 0
+        self.stamina = 300
+        self.poisoning = False
+        self.paralysis = False
+        self.paralysis_time = 300
+        self.burning = False
+        self.sleep = False ### implement later
+        # status effects : Poisoning, Paralysis, Burning, Sleep
         self.sprite = self.Sprite(self)
 
         #short range weapons
@@ -284,11 +332,23 @@ class Player(pygame.sprite.Sprite):
     def update(self, **kwargs):
         self.rect.x = self.irect.x - scroll[0]
         self.rect.y = self.irect.y - scroll[1]
+        if self.movement == [0, 0] and self.stamina < 300:
+            self.stamina += 1
+        if self.paralysis:
+            self.paralysis_time -= 1
+            self.movement = [0, 0]
+            if self.paralysis_time == 0:
+                self.paralysis_time = 300
+                self.paralysis = False
+        if self.poisoning or self.burning:
+            if self.sprite.animationvar == 0:
+                self.hp -= 1
     
     class Sprite(pygame.sprite.Sprite):
         def __init__(self, Player):
             pygame.sprite.Sprite.__init__(self)
             self.image = pygame.Surface((32, 64))
+            self.collidable = True
             self.image.fill((0, 0, 0))
             self.animationvar = 0
             self.spritesheet = pygame.image.load("8Direction_TopDown_CharacterAssets_ByBossNelNel/8Direction_TopDown_Character Sprites_ByBossNelNel/SpriteSheet.png")
@@ -339,16 +399,10 @@ class Player(pygame.sprite.Sprite):
 
 #endregion
 
-PlayerGroup = pygame.sprite.Group()
-EnemyGroup = pygame.sprite.Group()
-ObjectGroup = pygame.sprite.Group()
-VillageGroup = pygame.sprite.Group()
-SpriteGroup = pygame.sprite.Group()
-
 #region[rgb(30, 30, 30)]
 def gameloop(loadgame=0):
     #region
-    global scroll
+    global scroll, player
 
     player = Player()
     player.add(PlayerGroup)
@@ -357,7 +411,7 @@ def gameloop(loadgame=0):
     player.sprite.rect.center = 500, 400
     pygame.mouse.set_pos(500, 400)
 
-    village = Village(0, 0)
+    village = Village(50, 50)
     village.add(VillageGroup)
     village.sprite.add(SpriteGroup)
     # for houses in village.houses:
@@ -406,6 +460,13 @@ def gameloop(loadgame=0):
     def blit(group):
         order = []
         for item in group:
+            # print(type(item.outer))
+            if type(item.outer) == Village:
+                for house in item.outer.houses:
+                    order.append(house.sprite)
+                for villager in item.outer.villagers:
+                    order.append(villager.sprite)
+            # else:
             order.append(item)
         n = len(order)
         for i in range(n):
@@ -489,7 +550,7 @@ def gameloop(loadgame=0):
 
         for i in range(len(player.inv3)):
             pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
-            if Rect(50 + 100*i, 200, 200, 100).collidepoint(pygame.mouse.get_pos()):
+            if Rect(50 + 300*i, 200, 200, 100).collidepoint(pygame.mouse.get_pos()):
                 write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
                 if pygame.mouse.get_pressed()[0]:
                     player.active3 = i
@@ -500,13 +561,65 @@ def gameloop(loadgame=0):
         if bg.get_alpha() < 200:
             bg.set_alpha(bg.get_alpha() + 20)
         screen.blit(bg, (0, 0))
+        #region
+        #hp
         pygame.draw.rect(screen, (0, 0, 0), (100, 350, 800, 100), 1)
         pygame.draw.rect(screen, (100-player.hp, player.hp, int(player.hp/5)), (100, 350, player.hp*8, 100))
+        #endregion
+
+        #region
+        #stamina
+        pygame.draw.rect(screen, (0, 0, 0), (100, 500, 300, 30), 1)
+        if player.stamina/300*100 > 20:
+            pygame.draw.rect(screen, (255, 255, 0), (100, 500, player.stamina, 30))
+        else:
+            pygame.draw.rect(screen, (255, 0, 0), (100, 500, player.stamina, 30))
+        #endregion
+
+        #region
+        #status effects
+        if player.paralysis:
+            pygame.draw.rect(screen, (255, 160, 0), (450, 500, 75, 50))
+        else:
+            pygame.draw.rect(screen, (60, 40, 0), (450, 500, 75, 50))
+        write(True, "Par", (465, 505), fontsize=32)
+
+        if player.poisoning:
+            pygame.draw.rect(screen, (255, 0, 160), (575, 500, 75, 50))
+        else:
+            pygame.draw.rect(screen, (60, 0, 40), (575, 500, 75, 50))
+        write(True, "Psg", (590, 505), fontsize=32)
+        
+        if player.burning:
+            pygame.draw.rect(screen, (255, 80, 0), (700, 500, 75, 50))
+        else:
+            pygame.draw.rect(screen, (60, 20, 0), (700, 500, 75, 50))
+        write(True, "Brn", (715, 505), fontsize=32)
+
+        if player.sleep:
+            pygame.draw.rect(screen, (160, 160, 160), (825, 500, 75, 50))
+        else:
+            pygame.draw.rect(screen, (40, 40, 40), (825, 500, 75, 50))
+        write(True, "Slp", (840, 505), fontsize=32)
+        #endregion
+
         #also show stamina bar and status effects
     #endregion
     while running:
         if player.detectablebyenemies > 0:
             player.detectablebyenemies -= 0.2
+        # for enemy in EnemyGroup:
+        #     if enemy.hostile:
+        #         p_distance = math.sqrt((enemy.rect.x - player.rect.x)**2 + (enemy.rect.y - player.rect.y)**2)
+        #         if p_distance < 10:
+        #             if enemy.rect.centerx < player.rect.centerx:
+        #                 enemy.rect.x += 1
+        #             elif enemy.rect.centerx > player.rect.centerx:
+        #                 enemy.rect.x -= 1
+        #             if enemy.rect.centery < player.rect.centery:
+        #                 enemy.rect.y += 1
+        #             elif enemy.rect.centery > player.rect.centery:
+        #                 enemy.rect.y -= 1
         scroll[0] += (player.irect.x - scroll[0] - (500-player.irect.w/2))
         scroll[1] += (player.irect.y - scroll[1] - (400-player.irect.h/2))
         display_rect.x, display_rect.y = scroll[0], scroll[1]
@@ -545,9 +658,11 @@ def gameloop(loadgame=0):
             in_menu = False
             bg.set_alpha(0)
         player.sprint = False
-        if keys_pressed[K_LSHIFT]:
+        if keys_pressed[K_LSHIFT] and player.stamina > 0 and not player.poisoning:
             player.sprint = True
+            player.stamina -= 1
             player.detectablebyenemies = 100
+
         #region
         if not player.irect.collidepoint(mx, my) and not in_menu:
             if player.irect.right < mx:
@@ -626,6 +741,13 @@ def gameloop(loadgame=0):
                         # coll.movement[1] = -coll.mov  ement[1]
                     else:
                         player.hp -= 1
+                        player.paralysis = True
+                        player.poisoning = True
+                        player.burning = True
+                        if player.rect.x > coll.rect.x:
+                            coll.rect.x += 2
+                        elif player.rect.x < coll.rect.x:
+                            coll.rect.x -= 2
                         # player.movement[0] = -player.movement[0]
                         # player.movement[1] = -player.movement[1]
                     # else:
@@ -640,6 +762,13 @@ def gameloop(loadgame=0):
         pcoll = pygame.sprite.spritecollide(player, ObjectGroup, False)
         for enemy in pygame.sprite.spritecollide(player, EnemyGroup, False):
             pcoll.append(enemy)
+        for village in VillageGroup:
+            for house in village.houses:
+                if house.rect.colliderect(player.rect):
+                    pcoll.append(house)
+            for villager in village.villagers:
+                if villager.rect.colliderect(player.rect):
+                    pcoll.append(villager)
         # print(pcoll)
         for coll in pcoll:
             if player.movement[0] > 0:
@@ -663,6 +792,13 @@ def gameloop(loadgame=0):
                         # coll.movement[1] = -coll.movement[1]
                     else:
                         player.hp -= 1
+                        player.paralysis = True
+                        player.poisoning = True
+                        player.burning = True
+                        if player.rect.y > coll.rect.y:
+                            coll.rect.y += 2
+                        elif player.rect.y < coll.rect.y:
+                            coll.rect.y -= 2
                         # player.movement[0] = -player.movement[0]
                         # player.movement[1] = -player.movement[1]
                     # else:
@@ -677,6 +813,13 @@ def gameloop(loadgame=0):
         pcoll = pygame.sprite.spritecollide(player, ObjectGroup, False)
         for enemy in pygame.sprite.spritecollide(player, EnemyGroup, False):
             pcoll.append(enemy)
+        for village in VillageGroup:
+            for house in village.houses:
+                if house.rect.colliderect(player.rect):
+                    pcoll.append(house)
+            for villager in village.villagers:
+                if villager.rect.colliderect(player.rect):
+                    pcoll.append(villager)
         # print(pcoll)
         for coll in pcoll:
             if player.movement[1] > 0:
