@@ -1,4 +1,4 @@
-import pygame, sys, random, cmath
+import pygame, sys, random, time as t
 from pygame import *
 from pygame.locals import *
 
@@ -26,6 +26,36 @@ EnemyGroup = pygame.sprite.Group()
 ObjectGroup = pygame.sprite.Group()
 VillageGroup = pygame.sprite.Group()
 SpriteGroup = pygame.sprite.Group()
+
+name_dict = {}
+def speech_engine(player, name, text):
+    if not name in name_dict.keys():
+        name_dict[name] = (random.randint(20, 255), random.randint(20, 255), random.randint(20, 255))
+    color = name_dict[name]
+    # for i in range(500):
+    #     for ev in pygame.event.get():
+    #         if ev.type == QUIT:
+    #             pygame.quit()
+    #             sys.exit()
+    #             break
+    #     pygame.draw.rect(screen, (0, 0, 0), (0, 0, display_rect.w, 100))
+    #     write(True, text, (100, 20), color, 50)
+    #     pygame.display.update()
+    for i in range(500):
+        player.movement = [0, 0]
+        pygame.draw.rect(screen, (0, 0, 0), (0, 0, display_rect.w, 100))
+        write(True, text, (100, 20), color, 50)
+        pygame.display.update()
+
+# speech_engine("a")
+# speech_engine("b")
+# speech_engine("a")
+# speech_engine("c")
+# speech_engine("b")
+# speech_engine("d")
+# speech_engine("d")
+# speech_engine("a")
+# speech_engine("e")
 
 #region[rgba(0, 0, 0, 0.6)]
 class Object(pygame.sprite.Sprite):
@@ -299,6 +329,72 @@ class Village(Object):
             #     self.rect.bottom = self.outer.rect.bottom - scroll[1]
 #endregion
 
+#region[rgba(60, 40, 0, 1)]
+class LoreVillage(Village):
+    def __init__(self, x, y):
+        Village.__init__(self, x, y)
+        self.image = pygame.Surface((1570, 1536))
+        self.image.fill((255, 255, 0))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.blocksize = self.image.get_width()/64, self.image.get_height()/16
+        self.irect = self.rect
+        self.houses = []
+        self.villagers = []
+        self.sprite = self.Sprite(self)
+        with open("village_map1.txt", "r") as mapfile:
+            text = mapfile.readlines()
+            self.struct = []
+            for line in text:
+                linelist = []
+                for item in line:
+                    if item != "\n":
+                        linelist.append(int(item))
+                self.struct.append(linelist)
+        for y in range(len(self.struct)):
+            for x in range(len(self.struct[y])):
+                if self.struct[y][x] == 1:
+                    pass
+                elif self.struct[y][x] == 2:
+                    self.houses.append(self.House(self, self.rect.x + (x*self.blocksize[0]), self.rect.y + (y*self.blocksize[1])))
+                elif self.struct[y][x] == 3:
+                    self.villagers.append(self.Villager(self, self.rect.x + (x*self.blocksize[0]), self.rect.y + (y*self.blocksize[1])))
+
+    class Sprite(pygame.sprite.Sprite):
+        def __init__(self, LoreVillage):
+            pygame.sprite.Sprite.__init__(self)
+            self.outer = LoreVillage
+            self.collidable = False
+            self.image = pygame.Surface((1570, 1664))
+            self.rect = self.image.get_rect()
+            self.image.fill((120, 180, 140))
+            self.image.set_alpha(160)
+        
+        def update(self, **kwargs):
+            self.rect.x = self.outer.rect.x - 32 - scroll[0]
+            self.rect.y = self.outer.rect.y + 256 - scroll[1]
+            for villager in self.outer.villagers:
+                villager.rect.x = villager.irect.x - scroll[0]
+                villager.rect.y = villager.irect.y - scroll[1]
+                villager.sprite.rect.x = villager.rect.x - 4
+                villager.sprite.rect.bottom = villager.rect.bottom
+            for house in self.outer.houses:
+                house.rect.x = house.irect.x - scroll[0]
+                house.rect.y = house.irect.y - scroll[1]
+                house.sprite.rect.x = house.rect.x - 16
+                house.sprite.rect.bottom = house.rect.bottom
+            self.image.fill((120, 180, 140))
+            pygame.draw.rect(self.image, (255, 200, 0), (0, 0, self.rect.width, self.rect.height), 16)
+            # for house in self.outer.houses:
+            #     pygame.draw.rect(self.image, (255, 0, 0), house.sprite.rect)
+            # for villager in self.outer.villagers:
+            #     pygame.draw.rect(self.image, (0, 0, 20), villager.sprite.rect)
+
+
+
+#endregion
+
 #region[rgb(20, 40, 60)]
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -334,6 +430,11 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = self.irect.y - scroll[1]
         if self.movement == [0, 0] and self.stamina < 300:
             self.stamina += 1
+        
+        #region
+        self.stamina = 300 #remove after production
+        #endregion
+
         if self.paralysis:
             self.paralysis_time -= 1
             self.movement = [0, 0]
@@ -411,21 +512,24 @@ def gameloop(loadgame=0):
     player.sprite.rect.center = 500, 400
     pygame.mouse.set_pos(500, 400)
 
-    village = Village(50, 50)
-    village.add(VillageGroup)
-    village.sprite.add(SpriteGroup)
+    lore1v = LoreVillage(-250, -650)
+    lore1v.add(VillageGroup)
+    lore1v.sprite.add(SpriteGroup)
+
     # for houses in village.houses:
     #     houses.sprite.add(SpriteGroup)
     # for villager in village.villagers:
     #     villager.sprite.add(SpriteGroup)
 
+
     enemylist = []
     for i in range(4):
         x = random.randint(-800, 800)
         y = random.randint(-800, 800)
-        while village.rect.colliderect(Rect(x, y, 32, 64)):
-            x = random.randint(-800, 800)
-            y = random.randint(-800, 800)
+        for village in VillageGroup:
+            while village.rect.colliderect(Rect(x, y, 32, 64)):
+                x = random.randint(-800, 800)
+                y = random.randint(-800, 800)
         enemylist.append(Character(x, y))
 
     for enemy in enemylist:
@@ -437,9 +541,10 @@ def gameloop(loadgame=0):
     for i in range(8):
         x = random.randint(-800, 800)
         y = random.randint(-800, 800)
-        while village.rect.colliderect(Rect(x, y, 128, 244)):
-            x = random.randint(-800, 800)
-            y = random.randint(-800, 800)
+        for village in VillageGroup:
+            while village.rect.colliderect(Rect(x, y, 128, 244)):
+                x = random.randint(-800, 800)
+                y = random.randint(-800, 800)
         trees.append(Tree(x, y))
 
     for tree in trees:
@@ -461,7 +566,7 @@ def gameloop(loadgame=0):
         order = []
         for item in group:
             # print(type(item.outer))
-            if type(item.outer) == Village:
+            if type(item.outer) == Village or type(item.outer) == LoreVillage:
                 for house in item.outer.houses:
                     order.append(house.sprite)
                 for villager in item.outer.villagers:
@@ -737,13 +842,21 @@ def gameloop(loadgame=0):
                     # if (pcollside["front"] and player.movement[1] < 0) or (pcollside["back"] and player.movement[1] > 0) or(pcollside["left"] and player.movement[0] < 0) or (pcollside["right"] and player.movement[0] > 0):
                     if player.active1 > -1:
                         coll.hp -= 1
+                        speech_engine(player, "player", "Haha eat this!")
+                        speech_engine(player, "enemy", "Ouch! You will pay for this.")
+                        speech_engine(player, "player", "Let's see about that.")
+                        speech_engine(player, "enemy", "Grrrrr...")
                         # coll.movement[0] = -coll.movement[0]
                         # coll.movement[1] = -coll.mov  ement[1]
                     else:
                         player.hp -= 1
-                        player.paralysis = True
-                        player.poisoning = True
-                        player.burning = True
+                        speech_engine(player, "player", "Ouch!")
+                        speech_engine(player, "enemy", "Get lost!")
+                        speech_engine(player, "player", "I'll come back for you.")
+                        speech_engine(player, "enemy", "...")
+                        # player.paralysis = True
+                        # player.poisoning = True
+                        # player.burning = True
                         if player.rect.x > coll.rect.x:
                             coll.rect.x += 2
                         elif player.rect.x < coll.rect.x:
@@ -769,6 +882,8 @@ def gameloop(loadgame=0):
             for villager in village.villagers:
                 if villager.rect.colliderect(player.rect):
                     pcoll.append(villager)
+                    speech_engine(player, "player", "Hello there!")
+                    speech_engine(player, "villager", "Hello to you too!")
         # print(pcoll)
         for coll in pcoll:
             if player.movement[0] > 0:
@@ -788,13 +903,21 @@ def gameloop(loadgame=0):
                     # if (pcollside["front"] and player.movement[1] < 0) or (pcollside["back"] and player.movement[1] > 0) or(pcollside["left"] and player.movement[0] < 0) or (pcollside["right"] and player.movement[0] > 0):
                     if player.active1 > -1:
                         coll.hp -= 1
+                        speech_engine(player, "player", "Haha eat this!")
+                        speech_engine(player, "enemy", "Ouch! You will pay for this.")
+                        speech_engine(player, "player", "Let's see about that.")
+                        speech_engine(player, "enemy", "Grrrrr...")
                         # coll.movement[0] = -coll.movement[0]
                         # coll.movement[1] = -coll.movement[1]
                     else:
                         player.hp -= 1
-                        player.paralysis = True
-                        player.poisoning = True
-                        player.burning = True
+                        speech_engine(player, "player", "Ouch!")
+                        speech_engine(player, "enemy", "Get lost!")
+                        speech_engine(player, "player", "I'll come back for you.")
+                        speech_engine(player, "enemy", "...")
+                        # player.paralysis = True
+                        # player.poisoning = True
+                        # player.burning = True
                         if player.rect.y > coll.rect.y:
                             coll.rect.y += 2
                         elif player.rect.y < coll.rect.y:
@@ -820,6 +943,8 @@ def gameloop(loadgame=0):
             for villager in village.villagers:
                 if villager.rect.colliderect(player.rect):
                     pcoll.append(villager)
+                    speech_engine(player, "player", "Hello there!")
+                    speech_engine(player, "villager", "Hello to you too!")
         # print(pcoll)
         for coll in pcoll:
             if player.movement[1] > 0:
