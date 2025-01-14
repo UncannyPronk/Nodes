@@ -28,34 +28,32 @@ VillageGroup = pygame.sprite.Group()
 SpriteGroup = pygame.sprite.Group()
 
 name_dict = {}
-def speech_engine(player, name, text):
-    if not name in name_dict.keys():
-        name_dict[name] = (random.randint(20, 255), random.randint(20, 255), random.randint(20, 255))
-    color = name_dict[name]
-    # for i in range(500):
-    #     for ev in pygame.event.get():
-    #         if ev.type == QUIT:
-    #             pygame.quit()
-    #             sys.exit()
-    #             break
-    #     pygame.draw.rect(screen, (0, 0, 0), (0, 0, display_rect.w, 100))
-    #     write(True, text, (100, 20), color, 50)
-    #     pygame.display.update()
-    for i in range(500):
-        player.movement = [0, 0]
-        pygame.draw.rect(screen, (0, 0, 0), (0, 0, display_rect.w, 100))
-        write(True, text, (100, 20), color, 50)
-        pygame.display.update()
-
-# speech_engine("a")
-# speech_engine("b")
-# speech_engine("a")
-# speech_engine("c")
-# speech_engine("b")
-# speech_engine("d")
-# speech_engine("d")
-# speech_engine("a")
-# speech_engine("e")
+# timer = 300
+def speech_engine(player, entity, dict_):
+    if entity.interacted != 0:
+        entity.interacted -= 1
+        if player.rect.centerx < entity.rect.centerx:
+            player.rect.right = entity.rect.x - 10
+        else:
+            player.rect.x = entity.rect.right + 10
+        PlayerGroup.update()
+        for name in dict_.keys():
+            if not name in name_dict.keys():
+                name_dict[name] = (random.randint(20, 255), random.randint(20, 255), random.randint(20, 255))
+            color = name_dict[name]
+            for i in range(500):
+                for ev in pygame.event.get():
+                    if ev.type == QUIT:
+                        pygame.quit()
+                        sys.exit()
+                        break
+                # timer -= 1
+                # if timer <= 0:
+                #     timer = 300
+                player.movement = [0, 0]
+                pygame.draw.rect(screen, (0, 0, 0), (0, 0, display_rect.w, 100))
+                write(True, dict_[name], (100, 20), color, 50)
+                pygame.display.update()
 
 #region[rgba(0, 0, 0, 0.6)]
 class Object(pygame.sprite.Sprite):
@@ -112,6 +110,7 @@ class Character(pygame.sprite.Sprite):
         self.rect.topleft = x, y
         self.irect = self.rect
         self.hostile = False
+        self.interacted = 1
         self.movement = [0, 0]
         self.hp = 100
         self.sprite = self.Sprite(self)
@@ -403,6 +402,7 @@ class Player(pygame.sprite.Sprite):
         self.image.fill((255, 0, 0))
         self.rect = self.image.get_rect()
         self.irect = self.rect
+        self.detectrect = Rect(self.rect.x - 8, self.rect.y - 8, self.rect.width + 16, self.rect.height + 16)
         self.movement = [0, 0]
         self.hp = 100
         self.detectablebyenemies = 0
@@ -412,7 +412,6 @@ class Player(pygame.sprite.Sprite):
         self.paralysis_time = 300
         self.burning = False
         self.sleep = False ### implement later
-        # status effects : Poisoning, Paralysis, Burning, Sleep
         self.sprite = self.Sprite(self)
 
         #short range weapons
@@ -428,6 +427,8 @@ class Player(pygame.sprite.Sprite):
     def update(self, **kwargs):
         self.rect.x = self.irect.x - scroll[0]
         self.rect.y = self.irect.y - scroll[1]
+        self.detectrect.x = self.rect.x - 8
+        self.detectrect.y = self.rect.y - 8
         if self.movement == [0, 0] and self.stamina < 300:
             self.stamina += 1
         
@@ -842,18 +843,22 @@ def gameloop(loadgame=0):
                     # if (pcollside["front"] and player.movement[1] < 0) or (pcollside["back"] and player.movement[1] > 0) or(pcollside["left"] and player.movement[0] < 0) or (pcollside["right"] and player.movement[0] > 0):
                     if player.active1 > -1:
                         coll.hp -= 1
-                        speech_engine(player, "player", "Haha eat this!")
-                        speech_engine(player, "enemy", "Ouch! You will pay for this.")
-                        speech_engine(player, "player", "Let's see about that.")
-                        speech_engine(player, "enemy", "Grrrrr...")
+
+                        # speech_engine(player, "player", "Haha eat this!")
+                        # speech_engine(player, "enemy", "Ouch! You will pay for this.")
+                        # speech_engine(player, "player", "Let's see about that.")
+                        # speech_engine(player, "enemy", "Grrrrr...")
+
                         # coll.movement[0] = -coll.movement[0]
                         # coll.movement[1] = -coll.mov  ement[1]
                     else:
                         player.hp -= 1
-                        speech_engine(player, "player", "Ouch!")
-                        speech_engine(player, "enemy", "Get lost!")
-                        speech_engine(player, "player", "I'll come back for you.")
-                        speech_engine(player, "enemy", "...")
+
+                        # speech_engine(player, "player", "Ouch!")
+                        # speech_engine(player, "enemy", "Get lost!")
+                        # speech_engine(player, "player", "I'll come back for you.")
+                        # speech_engine(player, "enemy", "...")
+
                         # player.paralysis = True
                         # player.poisoning = True
                         # player.burning = True
@@ -882,8 +887,8 @@ def gameloop(loadgame=0):
             for villager in village.villagers:
                 if villager.rect.colliderect(player.rect):
                     pcoll.append(villager)
-                    speech_engine(player, "player", "Hello there!")
-                    speech_engine(player, "villager", "Hello to you too!")
+                if villager.rect.colliderect(player.detectrect):
+                    speech_engine(player, villager, {"player": "Hello there!", "villager": "Hello to you too!"})
         # print(pcoll)
         for coll in pcoll:
             if player.movement[0] > 0:
@@ -903,18 +908,22 @@ def gameloop(loadgame=0):
                     # if (pcollside["front"] and player.movement[1] < 0) or (pcollside["back"] and player.movement[1] > 0) or(pcollside["left"] and player.movement[0] < 0) or (pcollside["right"] and player.movement[0] > 0):
                     if player.active1 > -1:
                         coll.hp -= 1
-                        speech_engine(player, "player", "Haha eat this!")
-                        speech_engine(player, "enemy", "Ouch! You will pay for this.")
-                        speech_engine(player, "player", "Let's see about that.")
-                        speech_engine(player, "enemy", "Grrrrr...")
+
+                        # speech_engine(player, "player", "Haha eat this!")
+                        # speech_engine(player, "enemy", "Ouch! You will pay for this.")
+                        # speech_engine(player, "player", "Let's see about that.")
+                        # speech_engine(player, "enemy", "Grrrrr...")
+
                         # coll.movement[0] = -coll.movement[0]
                         # coll.movement[1] = -coll.movement[1]
                     else:
                         player.hp -= 1
-                        speech_engine(player, "player", "Ouch!")
-                        speech_engine(player, "enemy", "Get lost!")
-                        speech_engine(player, "player", "I'll come back for you.")
-                        speech_engine(player, "enemy", "...")
+
+                        # speech_engine(player, "player", "Ouch!")
+                        # speech_engine(player, "enemy", "Get lost!")
+                        # speech_engine(player, "player", "I'll come back for you.")
+                        # speech_engine(player, "enemy", "...")
+
                         # player.paralysis = True
                         # player.poisoning = True
                         # player.burning = True
@@ -943,8 +952,8 @@ def gameloop(loadgame=0):
             for villager in village.villagers:
                 if villager.rect.colliderect(player.rect):
                     pcoll.append(villager)
-                    speech_engine(player, "player", "Hello there!")
-                    speech_engine(player, "villager", "Hello to you too!")
+                if villager.rect.colliderect(player.detectrect):
+                    speech_engine(player, villager, {"player": "Hello there!", "villager": "Hello to you too!"})
         # print(pcoll)
         for coll in pcoll:
             if player.movement[1] > 0:
