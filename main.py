@@ -29,42 +29,74 @@ SpriteGroup = pygame.sprite.Group()
 
 name_dict = {}
 
-speaker = None
+speech_bool = False
+dialogue_list = []
+s_entity = None
+speech_index = 0
+prevkey = pygame.key.get_pressed()
+dialoguestr = ""
+dialogueindex = 0
 
 # timer = 300
 def speech_engine(player, entity, dialogues):
-    global speaker
-    if entity.interacted != 0:
-        entity.interacted -= 1
-        if player.rect.centerx < entity.rect.centerx:
-            player.rect.right = entity.rect.x - 10
-        else:
-            player.rect.x = entity.rect.right + 10
-        PlayerGroup.update()
-        for i in range(len(dialogues)):
-            speaker = dialogues[i][0]
-            if not dialogues[i][0] in name_dict.keys():
-                name_dict[dialogues[i][0]] = (random.randint(80, 255), random.randint(80, 255), random.randint(80, 255))
-            color = name_dict[dialogues[i][0]]
+    global speech_bool, dialogue_list, s_entity, speech_index, prevkey, dialogueindex, dialoguestr
+    keypress = True
+    if entity.interacted > 0:
+        try:
+            dialoguelen = len(dialogues[speech_index][1])
+            #region
+            if dialogueindex < dialoguelen:
+                dialogueindex += 0.1
+            dialoguestr = ""
+            for i in range(int(dialogueindex)):
+                dialoguestr += dialogues[speech_index][1][i]
+            #endregion
+            if not dialogues[speech_index][0] in name_dict.keys():
+                name_dict[dialogues[speech_index][0]] = (random.randint(120, 255), random.randint(120, 255), random.randint(120, 255))
+            color = name_dict[dialogues[speech_index][0]]
 
-            # for j in range(500):
-            #     for ev in pygame.event.get():
-            #         if ev.type == QUIT:
-            #             pygame.quit()
-            #             sys.exit()
-            #             break
-
-                # timer -= 1
-                # if timer <= 0:
-                #     timer = 300
             player.movement = [0, 0]
+            if not s_entity == None:
+                s_entity.movement = [0, 0]
             pygame.draw.rect(screen, (0, 0, 0), (0, 0, display_rect.w, 100))
-            write(True, dialogues[i][1], (100, 20), color, 50)
-            keys_pressed = pygame.key.get_pressed()
-            if not keys_pressed["K_SPACE"]:
-                i -= 1
-                # pygame.display.update()
-        speaker = None
+            # write(True, dialogues[speech_index][1], (100, 20), color, 50)
+            write(True, dialoguestr, (100, 20), color, 50)
+            write(True, "Press Enter", (display_rect.w - 100, 60), (255, 255, 255))
+        except IndexError:
+            entity.interacted = 0
+            speech_bool = False
+            s_entity = None
+            dialogue_list = []
+            speech_index = 0
+
+        # for ev in pygame.event.get():
+        #     if ev.type == KEYDOWN and ev.key == K_RETURN:
+        #         speech_index += 1
+        if keypress:
+            keyspressed = pygame.key.get_pressed()
+            if keyspressed[K_RETURN] and not prevkey[K_RETURN]:
+                if dialogueindex == dialoguelen:
+                    speech_index += 1
+                    dialogueindex = 0
+                    keypress = False
+                else:
+                    dialogueindex = dialoguelen
+                    keypress = False
+            if not keyspressed[K_RETURN] and prevkey[K_RETURN]:
+                keypress = True
+            prevkey = keyspressed
+
+        if speech_index > len(dialogues):
+            if entity.interacted > 0:
+                entity.interacted -= 1
+            if player.rect.centerx < entity.rect.centerx:
+                player.rect.right = entity.rect.x - 10
+            else:
+                player.rect.x = entity.rect.right + 10
+            speech_bool = False
+            s_entity = None
+            dialogue_list = []
+            speech_index = 0
 
 #region[rgba(0, 0, 0, 0.6)]
 class Object(pygame.sprite.Sprite):
@@ -516,6 +548,7 @@ class Player(pygame.sprite.Sprite):
 def gameloop(loadgame=0):
     #region
     global scroll, player
+    global speech_bool, dialogue_list, s_entity
 
     player = Player()
     player.add(PlayerGroup)
@@ -854,13 +887,19 @@ def gameloop(loadgame=0):
                     # if (pcollside["front"] and player.movement[1] < 0) or (pcollside["back"] and player.movement[1] > 0) or(pcollside["left"] and player.movement[0] < 0) or (pcollside["right"] and player.movement[0] > 0):
                     if player.active1 > -1:
                         coll.hp -= 1
-                        speech_engine(player, coll, [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]])
+                        # speech_engine(player, coll, [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]])
+                        speech_bool = True
+                        s_entity = coll
+                        dialogue_list = [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]]
 
                         # coll.movement[0] = -coll.movement[0]
                         # coll.movement[1] = -coll.mov  ement[1]
                     else:
                         player.hp -= 1
-                        speech_engine(player, coll, [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]])
+                        # speech_engine(player, coll, [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]])
+                        speech_bool = True
+                        s_entity = coll
+                        dialogue_list = [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]]
 
                         # player.paralysis = True
                         # player.poisoning = True
@@ -893,7 +932,10 @@ def gameloop(loadgame=0):
                 if villager.rect.colliderect(player.rect):
                     pcoll.append(villager)
                 if villager.rect.colliderect(player.detectrect):
-                    speech_engine(player, villager, [["player", "Hello there!"], ["villager", "Hello to you too!"]])
+                    # speech_engine(player, villager, [["player", "Hello there!"], ["villager", "Hello to you too!"]])
+                    speech_bool = True
+                    s_entity = villager
+                    dialogue_list = [["player", "Hello there!"], ["villager", "Hello to you too!"]]
         # print(pcoll)
         for coll in pcoll:
             if player.movement[0] > 0:
@@ -913,13 +955,19 @@ def gameloop(loadgame=0):
                     # if (pcollside["front"] and player.movement[1] < 0) or (pcollside["back"] and player.movement[1] > 0) or(pcollside["left"] and player.movement[0] < 0) or (pcollside["right"] and player.movement[0] > 0):
                     if player.active1 > -1:
                         coll.hp -= 1
-                        speech_engine(player, coll, [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]])
+                        # speech_engine(player, coll, [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]])
+                        speech_bool = True
+                        s_entity = coll
+                        dialogue_list = [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]]
 
                         # coll.movement[0] = -coll.movement[0]
                         # coll.movement[1] = -coll.movement[1]
                     else:
                         player.hp -= 1
-                        speech_engine(player, coll, [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]])
+                        # speech_engine(player, coll, [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]])
+                        speech_bool = True
+                        s_entity = coll
+                        dialogue_list = [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]]
 
                         # player.paralysis = True
                         # player.poisoning = True
@@ -952,7 +1000,10 @@ def gameloop(loadgame=0):
                 if villager.rect.colliderect(player.rect):
                     pcoll.append(villager)
                 if villager.rect.colliderect(player.detectrect):
-                    speech_engine(player, villager, [["player", "Hello there!"], ["villager", "Hello to you too!"]])
+                    # speech_engine(player, villager, [["player", "Hello there!"], ["villager", "Hello to you too!"]])
+                    speech_bool = True
+                    s_entity = villager
+                    dialogue_list = [["player", "Hello there!"], ["villager", "Hello to you too!"]]
         # print(pcoll)
         for coll in pcoll:
             if player.movement[1] > 0:
@@ -961,6 +1012,8 @@ def gameloop(loadgame=0):
             elif player.movement[1] < 0:
                 pcollside["front"] = True
                 player.rect.y = coll.rect.bottom
+        if speech_bool:
+            speech_engine(player, s_entity, dialogue_list)
         #endregion
 
 #endregion
