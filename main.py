@@ -1,4 +1,4 @@
-import pygame, sys, random, time as t
+import pygame, sys, random, time as t, winsound
 from pygame import *
 from pygame.locals import *
 
@@ -26,6 +26,7 @@ EnemyGroup = pygame.sprite.Group()
 ObjectGroup = pygame.sprite.Group()
 VillageGroup = pygame.sprite.Group()
 SpriteGroup = pygame.sprite.Group()
+NPCGroup = pygame.sprite.Group()
 
 name_dict = {}
 
@@ -46,7 +47,12 @@ def speech_engine(player, entity, dialogues):
             dialoguelen = len(dialogues[speech_index][1])
             #region
             if dialogueindex < dialoguelen:
-                dialogueindex += 0.1
+                # dialogueindex += 1
+                # winsound.Beep(800, 200)
+                dialogueindex = round((lambda dialogueindex:dialogueindex + 1)(dialogueindex), 1)
+                if dialogueindex == float(int(dialogueindex)):
+                    # print(dialogueindex)
+                    winsound.Beep(600, 80)
             dialoguestr = ""
             for i in range(int(dialogueindex)):
                 dialoguestr += dialogues[speech_index][1][i]
@@ -62,6 +68,10 @@ def speech_engine(player, entity, dialogues):
             # write(True, dialogues[speech_index][1], (100, 20), color, 50)
             write(True, dialoguestr, (100, 20), color, 50)
             write(True, "Press Enter", (display_rect.w - 100, 60), (255, 255, 255))
+            if dialogues[speech_index][0] == "player":
+                screen.blit(player.sprite.image, (30, 10))
+            else:
+                screen.blit(entity.sprite.image, (30, 10))
         except IndexError:
             entity.interacted = 0
             speech_bool = False
@@ -82,6 +92,7 @@ def speech_engine(player, entity, dialogues):
                 else:
                     dialogueindex = dialoguelen
                     keypress = False
+            # keyspressed = pygame.key.get_pressed()
             if not keyspressed[K_RETURN] and prevkey[K_RETURN]:
                 keypress = True
             prevkey = keyspressed
@@ -97,6 +108,19 @@ def speech_engine(player, entity, dialogues):
             s_entity = None
             dialogue_list = []
             speech_index = 0
+
+def npc_dialogues(entity):
+    if entity.id == None:
+        dialogue_list = [["player", "Hello there!"], ["npc", "Hello to you too!"]]
+    elif entity.id == "ruined":
+        dialogue_list = [["ruined", "The war has been really tough for all of us."], ["player", "What's wrong, old man?"], ["player", "Anything I can help with?"], ["ruined", "What is a kid like you"], ["ruined", "gonna do to stop a war?"]]
+    elif entity.id == "country":
+        dialogue_list = [["country", "Someone needs to stop this war."], ["player", "Yeah? How is that gonna happen?"], ["country", "For starters, one of us can go mess up"], ["country", "the country we are fighting... from inside."], ["player", "Right. Got it."]]
+    elif entity.id == "guide1":
+        dialogue_list = [["guide1", "You appear to be lost."], ["player", "I'm not exactly lost..."], ["player", "but I am low on resources."], ["guide1", "Keep heading EAST till you find a village."], ["guide1", "Salvation is nearing us..."], ["player", "What?"], ["guide1", "Nothing. Keep heading EAST."]]
+
+    return dialogue_list
+    
 
 #region[rgba(0, 0, 0, 0.6)]
 class Object(pygame.sprite.Sprite):
@@ -156,6 +180,7 @@ class Character(pygame.sprite.Sprite):
         self.interacted = 1
         self.movement = [0, 0]
         self.hp = 100
+        self.id = None
         self.sprite = self.Sprite(self)
 
     def update(self, **kwargs):
@@ -167,7 +192,7 @@ class Character(pygame.sprite.Sprite):
             pygame.sprite.Sprite.__init__(self)
             self.image = pygame.Surface((32, 64))
             self.collidable = True
-            self.image.fill((0, 0, 0))
+            self.image.fill((255, 0, 0))
             self.rect = self.image.get_rect()
             self.outer = Character
         
@@ -355,6 +380,7 @@ class Village(Object):
             self.detectablebyenemies = 0
             self.sprite = self.Sprite(self)
             self.mv = 0
+            self.id = None
 
         class Sprite(pygame.sprite.Sprite):
             def __init__(self, Villager):
@@ -402,6 +428,7 @@ class LoreVillage(Village):
                     self.houses.append(self.House(self, self.rect.x + (x*self.blocksize[0]), self.rect.y + (y*self.blocksize[1])))
                 elif self.struct[y][x] == 3:
                     self.villagers.append(self.Villager(self, self.rect.x + (x*self.blocksize[0]), self.rect.y + (y*self.blocksize[1])))
+
 
     class Sprite(pygame.sprite.Sprite):
         def __init__(self, LoreVillage):
@@ -557,9 +584,17 @@ def gameloop(loadgame=0):
     player.sprite.rect.center = 500, 400
     pygame.mouse.set_pos(500, 400)
 
-    lore1v = LoreVillage(-250, -650)
+    lore1v = LoreVillage(3000, -800)
     lore1v.add(VillageGroup)
     lore1v.sprite.add(SpriteGroup)
+    lore1v.villagers[1].id = "ruined"
+    lore1v.villagers[3].id = "country"
+
+    guide1 = Character(100, 0)
+    guide1.add(NPCGroup)
+    guide1.sprite.add(SpriteGroup)
+    guide1.sprite.image.fill((255, 255, 0))
+    guide1.id = "guide1"
 
     # for houses in village.houses:
     #     houses.sprite.add(SpriteGroup)
@@ -579,6 +614,7 @@ def gameloop(loadgame=0):
 
     for enemy in enemylist:
         enemy.hostile = True
+        enemy.id = "enemy"
         enemy.add(EnemyGroup)
         enemy.sprite.add(SpriteGroup)
 
@@ -789,6 +825,7 @@ def gameloop(loadgame=0):
         PlayerGroup.update()
         VillageGroup.update()
         SpriteGroup.update()
+        NPCGroup.update()
         
         mx, my = pygame.mouse.get_pos()
         keys_pressed = pygame.key.get_pressed()
@@ -935,7 +972,15 @@ def gameloop(loadgame=0):
                     # speech_engine(player, villager, [["player", "Hello there!"], ["villager", "Hello to you too!"]])
                     speech_bool = True
                     s_entity = villager
-                    dialogue_list = [["player", "Hello there!"], ["villager", "Hello to you too!"]]
+                    dialogue_list = npc_dialogues(villager)
+        for npc in NPCGroup:
+            if npc.rect.colliderect(player.rect):
+                pcoll.append(npc)
+            if npc.rect.colliderect(player.detectrect):
+                speech_bool = True
+                s_entity = npc
+                dialogue_list = npc_dialogues(npc)
+                
         # print(pcoll)
         for coll in pcoll:
             if player.movement[0] > 0:
@@ -1003,7 +1048,14 @@ def gameloop(loadgame=0):
                     # speech_engine(player, villager, [["player", "Hello there!"], ["villager", "Hello to you too!"]])
                     speech_bool = True
                     s_entity = villager
-                    dialogue_list = [["player", "Hello there!"], ["villager", "Hello to you too!"]]
+                    dialogue_list = npc_dialogues(villager)
+        for npc in NPCGroup:
+            if npc.rect.colliderect(player.rect):
+                pcoll.append(npc)
+            if npc.rect.colliderect(player.detectrect):
+                speech_bool = True
+                s_entity = npc
+                dialogue_list = npc_dialogues(npc)
         # print(pcoll)
         for coll in pcoll:
             if player.movement[1] > 0:
