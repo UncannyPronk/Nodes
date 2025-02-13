@@ -38,9 +38,13 @@ prevkey = pygame.key.get_pressed()
 dialoguestr = ""
 dialogueindex = 0
 
+dialogue_end = False
+
+ruined_talked = False
+
 # timer = 300
 def speech_engine(player, entity, dialogues):
-    global speech_bool, dialogue_list, s_entity, speech_index, prevkey, dialogueindex, dialoguestr
+    global speech_bool, dialogue_list, s_entity, speech_index, prevkey, dialogueindex, dialoguestr, dialogue_end
     keypress = True
     if entity.interacted > 0:
         try:
@@ -108,19 +112,52 @@ def speech_engine(player, entity, dialogues):
             s_entity = None
             dialogue_list = []
             speech_index = 0
+            dialogue_end = True
 
 def npc_dialogues(entity):
+    global ruined_talked
     if entity.id == None:
         dialogue_list = [["player", "Hello there!"], ["npc", "Hello to you too!"]]
     elif entity.id == "ruined":
+        ruined_talked = True
         dialogue_list = [["ruined", "The war has been really tough for all of us."], ["player", "What's wrong, old man?"], ["player", "Anything I can help with?"], ["ruined", "What is a kid like you"], ["ruined", "gonna do to stop a war?"]]
     elif entity.id == "country":
-        dialogue_list = [["country", "Someone needs to stop this war."], ["player", "Yeah? How is that gonna happen?"], ["country", "For starters, one of us can go mess up"], ["country", "the country we are fighting... from inside."], ["player", "Right. Got it."]]
+        if ruined_talked:
+            dialogue_list = [["country", "Someone needs to stop this war."], ["player", "Yeah? How is that gonna happen?"], ["country", "For starters, one of us can go mess up"], ["country", "the country we are fighting... from inside."], ["player", "Right. Got it."]]
+        else:
+            dialogue_list = [["country", "I'm too old to fight."], ["player", "You can take a back seat."], ["player", "I'll handle this."], ["country", "You're just a kid..."], ["country", "Talk to that other guy in that back"], ["country", "He will tell you that this"], ["country", "ain't no child's game."]]
+            entity.interacted = 1
+            player.rect.x += 10
     elif entity.id == "guide1":
         dialogue_list = [["guide1", "You appear to be lost."], ["player", "I'm not exactly lost..."], ["player", "but I am low on resources."], ["guide1", "Keep heading EAST till you find a village."], ["guide1", "Salvation is nearing us..."], ["player", "What?"], ["guide1", "Nothing. Keep heading EAST."]]
 
     return dialogue_list
-    
+
+bg = pygame.Surface((display_rect.w, display_rect.h))
+bg.fill((0, 0, 0))
+bg.set_alpha(0)
+remaining_missions = ["attack nearby country"]
+finished_missions = []
+def new_mission(mission=None):
+    if not mission in finished_missions:
+        if bg.get_alpha() < 255:
+            bg.set_alpha(bg.get_alpha() + 5)
+        running = True
+        while running:
+            for ev in pygame.event.get():
+                if ev.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                    running = False
+                if ev.type == pygame.KEYDOWN:
+                    if ev.key == pygame.K_RETURN:
+                        running = False
+
+            screen.blit(bg, (0, 0))
+            pygame.draw.rect(screen, (255, 255, 0), (display_rect.centerx - 300, display_rect.centery - 200, 600, 400))
+            pygame.display.flip()
+        finished_missions.append(mission)
+        remaining_missions.remove(mission)
 
 #region[rgba(0, 0, 0, 0.6)]
 class Object(pygame.sprite.Sprite):
@@ -588,6 +625,7 @@ def gameloop(loadgame=0):
     lore1v.add(VillageGroup)
     lore1v.sprite.add(SpriteGroup)
     lore1v.villagers[1].id = "ruined"
+    lore1v.villagers[3].id = "country"
     lore1v.villagers[3].id = "country"
 
     guide1 = Character(100, 0)
@@ -1065,7 +1103,19 @@ def gameloop(loadgame=0):
                 pcollside["front"] = True
                 player.rect.y = coll.rect.bottom
         if speech_bool:
+            global dialogue_end
             speech_engine(player, s_entity, dialogue_list)
+            if dialogue_end:
+                try:
+                    if s_entity.id == "country":
+                        try:
+                            new_mission(remaining_missions[0])
+                        except IndexError:
+                            pass
+                except AttributeError:
+                    speech_bool = False
+                dialogue_end = False   # debug this in the next stream.
+
         #endregion
 
 #endregion
