@@ -1,4 +1,4 @@
-import pygame, sys, random, time as t, winsound
+import pygame, sys, random, winsound, time as t
 from pygame import *
 from pygame.locals import *
 
@@ -21,26 +21,40 @@ def write(blit=True, text='sample text', position=(0, 0), color=(0, 0, 0), fonts
     else:
         return text, position
 
-PlayerGroup = pygame.sprite.Group()
-EnemyGroup = pygame.sprite.Group()
-ObjectGroup = pygame.sprite.Group()
-VillageGroup = pygame.sprite.Group()
-SpriteGroup = pygame.sprite.Group()
-NPCGroup = pygame.sprite.Group()
+def reset():
+    global speech_bool, dialogue_list, s_entity, speech_index, dialoguestr, dialogueindex, dialogue_end, ruined_talked, name_dict, remaining_missions, finished_missions, PlayerGroup, EnemyGroup, ObjectGroup, VillageGroup, SpriteGroup, NPCGroup
+    PlayerGroup = pygame.sprite.Group()
+    EnemyGroup = pygame.sprite.Group()
+    ObjectGroup = pygame.sprite.Group()
+    VillageGroup = pygame.sprite.Group()
+    SpriteGroup = pygame.sprite.Group()
+    NPCGroup = pygame.sprite.Group()
 
-name_dict = {}
+    name_dict = {}
 
-speech_bool = False
-dialogue_list = []
-s_entity = None
-speech_index = 0
-prevkey = pygame.key.get_pressed()
-dialoguestr = ""
-dialogueindex = 0
+    speech_bool = False
+    dialogue_list = []
+    s_entity = None
+    speech_index = 0
+    dialoguestr = ""
+    dialogueindex = 0
 
-dialogue_end = False
+    dialogue_end = False
 
-ruined_talked = False
+    ruined_talked = False
+
+    remaining_missions = ["attack nearby country"]
+    finished_missions = []
+
+reset()
+
+# # GAMEPAD CONTROLS INIT
+pygame.joystick.init()
+
+if pygame.joystick.get_count() > 0:
+    prevkey = pygame.joystick.Joystick(0).get_button(0)
+else:
+    prevkey = pygame.key.get_pressed()
 
 # timer = 300
 def speech_engine(player, entity, dialogues):
@@ -70,14 +84,16 @@ def speech_engine(player, entity, dialogues):
                 s_entity.movement = [0, 0]
             pygame.draw.rect(screen, (0, 0, 0), (0, 0, display_rect.w, 100))
             # write(True, dialogues[speech_index][1], (100, 20), color, 50)
-            write(True, dialoguestr, (100, 20), color, 50)
-            write(True, "Press Enter", (display_rect.w - 100, 60), (255, 255, 255))
+            write(True, dialoguestr, (100, 20), color, 42)
+            write(True, "Press Enter", (display_rect.w - 150, 60), (255, 255, 255))
             if dialogues[speech_index][0] == "player":
                 screen.blit(player.sprite.image, (30, 10))
             else:
                 screen.blit(entity.sprite.image, (30, 10))
         except IndexError:
-            entity.interacted = 0
+            # print("IndexError - An error has been triggered")
+            if entity.id != "country":
+                entity.interacted = 0
             speech_bool = False
             s_entity = None
             dialogue_list = []
@@ -87,28 +103,57 @@ def speech_engine(player, entity, dialogues):
         #     if ev.type == KEYDOWN and ev.key == K_RETURN:
         #         speech_index += 1
         if keypress:
-            keyspressed = pygame.key.get_pressed()
-            if keyspressed[K_RETURN] and not prevkey[K_RETURN]:
-                if dialogueindex == dialoguelen:
-                    speech_index += 1
-                    dialogueindex = 0
-                    keypress = False
-                else:
-                    dialogueindex = dialoguelen
-                    keypress = False
-            # keyspressed = pygame.key.get_pressed()
-            if not keyspressed[K_RETURN] and prevkey[K_RETURN]:
-                keypress = True
-            prevkey = keyspressed
-
-        if speech_index > len(dialogues):
-            if entity.interacted > 0:
-                entity.interacted -= 1
-            if player.rect.centerx < entity.rect.centerx:
-                player.rect.right = entity.rect.x - 10
+            if controller_connected:
+                joybtnpressed = joysticks[0].get_button(0)
+                if joybtnpressed and not prevkey:
+                    if dialogueindex == dialoguelen:
+                        speech_index += 1
+                        dialogueindex = 0
+                        keypress = False
+                    else:
+                        dialogueindex = dialoguelen
+                        keypress = False
+                if not joybtnpressed and prevkey:
+                    keypress = True
+                prevkey = joybtnpressed
+                # for event in pygame.event.get():
+                #     if event.type == pygame.JOYBUTTONDOWN:
+                #         if event.button == 0:
+                #             if dialogueindex == dialoguelen:
+                #                 speech_index += 1
+                #                 dialogueindex = 0
+                #                 keypress = False
+                #             else:
+                #                 dialogueindex = dialoguelen
+                #                 keypress = False
             else:
-                player.rect.x = entity.rect.right + 10
+                keyspressed = pygame.key.get_pressed()
+                if keyspressed[K_RETURN] and not prevkey[K_RETURN]:
+                    if dialogueindex == dialoguelen:
+                        speech_index += 1
+                        dialogueindex = 0
+                        keypress = False
+                    else:
+                        dialogueindex = dialoguelen
+                        keypress = False
+                if not keyspressed[K_RETURN] and prevkey[K_RETURN]:
+                    keypress = True
+                prevkey = keyspressed
+
+        if speech_index >= len(dialogues):
             speech_bool = False
+            if entity.interacted > 0:
+                if entity.id != "country":
+                    entity.interacted -= 1
+            if entity.id == "country" and ruined_talked:
+                try:
+                    new_mission(remaining_missions[0])
+                except IndexError:
+                    pass
+            if player.rect.centerx < entity.rect.centerx:
+                player.rect.right = entity.rect.x - 12
+            else:
+                player.rect.x = entity.rect.right + 12
             s_entity = None
             dialogue_list = []
             speech_index = 0
@@ -126,8 +171,6 @@ def npc_dialogues(entity):
             dialogue_list = [["country", "Someone needs to stop this war."], ["player", "Yeah? How is that gonna happen?"], ["country", "For starters, one of us can go mess up"], ["country", "the country we are fighting... from inside."], ["player", "Right. Got it."]]
         else:
             dialogue_list = [["country", "I'm too old to fight."], ["player", "You can take a back seat."], ["player", "I'll handle this."], ["country", "You're just a kid..."], ["country", "Talk to that other guy in that back"], ["country", "He will tell you that this"], ["country", "ain't no child's game."]]
-            entity.interacted = 1
-            player.rect.x += 10
     elif entity.id == "guide1":
         dialogue_list = [["guide1", "You appear to be lost."], ["player", "I'm not exactly lost..."], ["player", "but I am low on resources."], ["guide1", "Keep heading EAST till you find a village."], ["guide1", "Salvation is nearing us..."], ["player", "What?"], ["guide1", "Nothing. Keep heading EAST."]]
 
@@ -136,9 +179,8 @@ def npc_dialogues(entity):
 bg = pygame.Surface((display_rect.w, display_rect.h))
 bg.fill((0, 0, 0))
 bg.set_alpha(0)
-remaining_missions = ["attack nearby country"]
-finished_missions = []
 def new_mission(mission=None):
+    wait = 0
     if not mission in finished_missions:
         if bg.get_alpha() < 255:
             bg.set_alpha(bg.get_alpha() + 5)
@@ -149,12 +191,23 @@ def new_mission(mission=None):
                     pygame.quit()
                     sys.exit()
                     running = False
-                if ev.type == pygame.KEYDOWN:
-                    if ev.key == pygame.K_RETURN:
+
+            if wait > 500:
+                if controller_connected:
+                    joybtnpressed = joysticks[0].get_button(0)
+                    if joybtnpressed:
                         running = False
+                else:
+                    keyspressed = pygame.key.get_pressed()
+                    if keyspressed[K_RETURN]:
+                        running = False
+            else:
+                wait += 1
 
             screen.blit(bg, (0, 0))
             pygame.draw.rect(screen, (255, 255, 0), (display_rect.centerx - 300, display_rect.centery - 200, 600, 400))
+            write(True, "New Mission", (display_rect.centerx - 100, display_rect.centery - 150), (0, 0, 0), 50)
+            write(True, mission, (display_rect.centerx - 100, display_rect.centery - 100), (0, 0, 0), 40)
             pygame.display.flip()
         finished_missions.append(mission)
         remaining_missions.remove(mission)
@@ -424,7 +477,8 @@ class Village(Object):
                 pygame.sprite.Sprite.__init__(self)
                 self.outer = Villager
                 self.image = pygame.Surface((32, 64))
-                self.image.fill((0, 80, 255))
+                self.color = (0, 80, 255)
+                self.image.fill(self.color)
                 self.rect = self.image.get_rect()
                 self.rect.x = self.outer.rect.x
                 self.rect.y = self.outer.rect.y
@@ -611,7 +665,7 @@ class Player(pygame.sprite.Sprite):
 #region[rgb(30, 30, 30)]
 def gameloop(loadgame=0):
     #region
-    global scroll, player
+    global scroll, player, controller_connected
     global speech_bool, dialogue_list, s_entity
 
     player = Player()
@@ -624,9 +678,10 @@ def gameloop(loadgame=0):
     lore1v = LoreVillage(3000, -800)
     lore1v.add(VillageGroup)
     lore1v.sprite.add(SpriteGroup)
-    lore1v.villagers[1].id = "ruined"
-    lore1v.villagers[3].id = "country"
-    lore1v.villagers[3].id = "country"
+    lore1v.villagers[0].id = "ruined"
+    lore1v.villagers[0].sprite.color = (255, 0, 255)
+    lore1v.villagers[1].id = "country"
+    lore1v.villagers[1].sprite.color = (10, 255, 10)
 
     guide1 = Character(100, 0)
     guide1.add(NPCGroup)
@@ -729,6 +784,38 @@ def gameloop(loadgame=0):
             else:
                 write(text=player.inv1[i], position=(75 + 300*i, 210), fontsize=60)
         pygame.draw.line(screen, (255, 255, 255), (500, 600), pygame.mouse.get_pos(), 3)
+
+    def menu1joy(joystick):
+        if bg.get_alpha() < 200:
+            bg.set_alpha(bg.get_alpha() + 20)
+
+        screen.blit(bg, (0, 0))
+        if player.active1 > -1:
+            for i in range(len(player.inv1)):
+                if player.active1 == i:
+                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
+        if joystick.get_button(3):
+            player.active1 = -1
+        for ev in pygame.event.get():
+            if ev.type == pygame.JOYAXISMOTION:
+                if joystick.get_axis(2) > 0:
+                    if player.active1 < len(player.inv1) - 1:
+                        player.active1 += 1
+                    else:
+                        player.active1 = 0
+                if joystick.get_axis(2) < 0:
+                    if player.active1 > 0:
+                        player.active1 -= 1
+                    else:
+                        player.active1 = len(player.inv1) - 1
+                print(player.active1)
+        for i in range(len(player.inv1)):
+            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
+            if player.active1 == i:
+                write(text=player.inv1[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
+            else:
+                write(text=player.inv1[i], position=(75 + 300*i, 210), fontsize=60)
+
     def menu2():
         if bg.get_alpha() < 200:
             bg.set_alpha(bg.get_alpha() + 20)
@@ -755,6 +842,36 @@ def gameloop(loadgame=0):
             else:
                 write(text=player.inv2[i], position=(75 + 300*i, 210), fontsize=60)
         pygame.draw.line(screen, (255, 255, 255), (500, 600), pygame.mouse.get_pos(), 3)
+    def menu2joy(joystick):
+        if bg.get_alpha() < 200:
+            bg.set_alpha(bg.get_alpha() + 20)
+
+        screen.blit(bg, (0, 0))
+        if player.active2 > -1:
+            for i in range(len(player.inv2)):
+                if player.active2 == i:
+                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
+        if joystick.get_button(3):
+            player.active2 = -1
+        for ev in pygame.event.get():
+            if ev.type == pygame.JOYAXISMOTION:
+                if joystick.get_axis(2) > 0:
+                    if player.active2 < len(player.inv2) - 1:
+                        player.active2 += 1
+                    else:
+                        player.active2 = 0
+                if joystick.get_axis(2) < 0:
+                    if player.active2 > 0:
+                        player.active2 -= 1
+                    else:
+                        player.active1 = len(player.inv2) - 1
+                print(player.active2)
+        for i in range(len(player.inv2)):
+            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
+            if player.active2 == i:
+                write(text=player.inv2[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
+            else:
+                write(text=player.inv2[i], position=(75 + 300*i, 210), fontsize=60)
     def menu3():
         if bg.get_alpha() < 200:
             bg.set_alpha(bg.get_alpha() + 20)
@@ -781,6 +898,40 @@ def gameloop(loadgame=0):
             else:
                 write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60)
         pygame.draw.line(screen, (255, 255, 255), (500, 600), pygame.mouse.get_pos(), 3)
+    def menu3joy(joystick):
+        if bg.get_alpha() < 200:
+            bg.set_alpha(bg.get_alpha() + 20)
+
+        screen.blit(bg, (0, 0))
+        if player.active3 > -1:
+            for i in range(len(player.inv3)):
+                if player.active3 == i:
+                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
+        # if joystick.get_button(3):
+        #     player.active3 = -1
+        for ev in pygame.event.get():
+            if ev.type == pygame.JOYAXISMOTION:
+                if joystick.get_axis(2) > 0:
+                    if player.active3 < len(player.inv3) - 1:
+                        player.active3 += 1
+                    else:
+                        player.active3 = 0
+                elif joystick.get_axis(2) < 0:
+                    if player.active3 > 0:
+                        player.active3 -= 1
+                    else:
+                        player.active3 = len(player.inv3) - 1
+                else:
+                    player.active3 = -1
+                for i in range(420):
+                    print("")
+                # print(player.active3)
+        for i in range(len(player.inv3)):
+            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
+            if player.active3 == i:
+                write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
+            else:
+                write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60)
     def status():
         if bg.get_alpha() < 200:
             bg.set_alpha(bg.get_alpha() + 20)
@@ -829,6 +980,7 @@ def gameloop(loadgame=0):
 
         #also show stamina bar and status effects
     #endregion
+
     while running:
         if player.detectablebyenemies > 0:
             player.detectablebyenemies -= 0.2
@@ -856,6 +1008,24 @@ def gameloop(loadgame=0):
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_a or ev.key == pygame.K_s or ev.key == pygame.K_d:
                     pygame.mouse.set_pos(500, 650)
+            if ev.type == pygame.JOYBUTTONDOWN:
+                # print("Joystick button pressed.")
+                if ev.button == 1:
+                    joystick = joysticks[ev.instance_id]
+                    joystick.rumble(0, 0.5, 150)
+                        # print(f"Rumble effect played on joystick {ev.instance_id}")
+            # if ev.type == pygame.JOYBUTTONUP:
+                # print("Joystick button released.")
+            if ev.type == pygame.JOYDEVICEADDED:
+                controller_connected = True
+                joy = pygame.joystick.Joystick(ev.device_index)
+                joysticks[joy.get_instance_id()] = joy
+                # print(f"Joystick {joy.get_instance_id()} connencted")
+            if ev.type == pygame.JOYDEVICEREMOVED:
+                controller_connected = False
+                del joysticks[ev.instance_id]
+                # print(f"Joystick {ev.instance_id} disconnected")
+    
         screen.fill((0, 255, 120))
         blit(SpriteGroup)
         ObjectGroup.update()
@@ -864,92 +1034,139 @@ def gameloop(loadgame=0):
         VillageGroup.update()
         SpriteGroup.update()
         NPCGroup.update()
-        
-        mx, my = pygame.mouse.get_pos()
-        keys_pressed = pygame.key.get_pressed()
-        if keys_pressed[K_SPACE]:
-            in_menu = True
-            status()
-        elif keys_pressed[K_a]:
-            in_menu = True
-            menu1()
-        elif keys_pressed[K_s]:
-            in_menu = True
-            menu2()
-        elif keys_pressed[K_d]:
-            in_menu = True
-            menu3()
-        else:
-            in_menu = False
-            bg.set_alpha(0)
-        player.sprint = False
-        if keys_pressed[K_LSHIFT] and player.stamina > 0 and not player.poisoning:
-            player.sprint = True
-            player.stamina -= 1
-            player.detectablebyenemies = 100
+                
+        if not speech_bool:
+            if not controller_connected:
+                mx, my = pygame.mouse.get_pos()
+                keys_pressed = pygame.key.get_pressed()
+                if keys_pressed[K_SPACE]:
+                    in_menu = True
+                    status()
+                elif keys_pressed[K_a]:
+                    in_menu = True
+                    menu1()
+                elif keys_pressed[K_s]:
+                    in_menu = True
+                    menu2()
+                elif keys_pressed[K_d]:
+                    in_menu = True
+                    menu3()
+                else:
+                    in_menu = False
+                    bg.set_alpha(0)
+                player.sprint = False
+                if keys_pressed[K_LSHIFT] and player.stamina > 0 and not player.poisoning:
+                    player.sprint = True
+                    player.stamina -= 1
+                    player.detectablebyenemies = 100
 
-        #region
-        if not player.irect.collidepoint(mx, my) and not in_menu:
-            if player.irect.right < mx:
-                if player.movement[0] < 2:
-                    player.movement[0] += (mx - player.irect.center[0])/800
-                if player.sprint:
-                    if player.movement[0] < 6:
-                        player.movement[0] += (mx - player.irect.center[0])/800
-                else:
-                    if player.movement[0] > 2:
-                        player.movement[0] -= 0.5
-                # print(mx - player.irect.center[0])
-            elif player.irect.x > mx:
-                if player.movement[0] > -2:
-                    player.movement[0] -= (player.irect.center[0] - mx)/800
-                if player.sprint:
-                    if player.movement[0] > -6:
-                        player.movement[0] -= (player.irect.center[0] - mx)/800
-                else:
-                    if player.movement[0] < -2:
-                        player.movement[0] += 0.5
-                # print(player.irect.center[0] - mx)
-            else:
-                # print(player.movement[0])
-                if 2 > player.movement[0] > 0:
-                    player.movement[0] -= 0.5
-                if -2 < player.movement[0] < 0:
-                    player.movement[0] += 0.5
-                if player.movement[0] < 0.5 or player.movement[0] > -0.5:
-                    player.movement[0] = 0
+                if not player.irect.collidepoint(mx, my) and not in_menu:
+                    if player.irect.right < mx:
+                        if player.movement[0] < 2:
+                            player.movement[0] += (mx - player.irect.center[0])/800
+                        if player.sprint:
+                            if player.movement[0] < 6:
+                                player.movement[0] += (mx - player.irect.center[0])/800
+                        else:
+                            if player.movement[0] > 2:
+                                player.movement[0] -= 0.5
+                        # print(mx - player.irect.center[0])
+                    elif player.irect.x > mx:
+                        if player.movement[0] > -2:
+                            player.movement[0] -= (player.irect.center[0] - mx)/800
+                        if player.sprint:
+                            if player.movement[0] > -6:
+                                player.movement[0] -= (player.irect.center[0] - mx)/800
+                        else:
+                            if player.movement[0] < -2:
+                                player.movement[0] += 0.5
+                        # print(player.irect.center[0] - mx)
+                    else:
+                        # print(player.movement[0])
+                        if 2 > player.movement[0] > 0:
+                            player.movement[0] -= 0.5
+                        if -2 < player.movement[0] < 0:
+                            player.movement[0] += 0.5
+                        if player.movement[0] < 0.5 or player.movement[0] > -0.5:
+                            player.movement[0] = 0
 
-            if player.irect.bottom < my:
-                if player.movement[1] < 2:
-                    player.movement[1] += (my - player.irect.center[1])/800
-                if player.sprint:
-                    if player.movement[1] < 6:
-                        player.movement[1] += (my - player.irect.center[1])/800
+                    if player.irect.bottom < my:
+                        if player.movement[1] < 2:
+                            player.movement[1] += (my - player.irect.center[1])/800
+                        if player.sprint:
+                            if player.movement[1] < 6:
+                                player.movement[1] += (my - player.irect.center[1])/800
+                        else:
+                            if player.movement[1] > 2:
+                                player.movement[1] -= 0.5
+                        # print(my - player.irect.center[1])
+                    elif player.irect.y > my:
+                        if player.movement[1] > -2:
+                            player.movement[1] -= (player.irect.center[1] - my)/800
+                        if player.sprint:
+                            if player.movement[1] > -6:
+                                player.movement[1] -= (player.irect.center[1] - my)/800
+                        else:
+                            if player.movement[1] < -2:
+                                player.movement[1] += 0.5
+                        # print(player.irect.center[1] - my)
+                    else:
+                        # print(player.movement[1])
+                        if 2 > player.movement[1] > 0:
+                            player.movement[1] -= 0.5
+                        if -2 < player.movement[1] < 0:
+                            player.movement[1] += 0.5
+                        if player.movement[1] < 0.5 or player.movement[1] > -0.5:
+                            player.movement[1] = 0
                 else:
-                    if player.movement[1] > 2:
-                        player.movement[1] -= 0.5
-                # print(my - player.irect.center[1])
-            elif player.irect.y > my:
-                if player.movement[1] > -2:
-                    player.movement[1] -= (player.irect.center[1] - my)/800
-                if player.sprint:
-                    if player.movement[1] > -6:
-                        player.movement[1] -= (player.irect.center[1] - my)/800
-                else:
-                    if player.movement[1] < -2:
-                        player.movement[1] += 0.5
-                # print(player.irect.center[1] - my)
+                    player.movement = [0, 0]
+            
             else:
-                # print(player.movement[1])
-                if 2 > player.movement[1] > 0:
-                    player.movement[1] -= 0.5
-                if -2 < player.movement[1] < 0:
-                    player.movement[1] += 0.5
-                if player.movement[1] < 0.5 or player.movement[1] > -0.5:
-                    player.movement[1] = 0
-        else:
-            player.movement = [0, 0]
-        #endregion
+                for joystick in joysticks.values():
+                    if joystick.get_button(7):
+                        reset()
+                        running = False
+                    # axes = joystick.get_numaxes()
+                    # for i in range(axes):
+                    xaxis = joystick.get_axis(0)
+                    player.movement[0] = xaxis*2
+                    if xaxis == 0:
+                        player.movement[0] = 0
+                    yaxis = joystick.get_axis(1)
+                    player.movement[1] = yaxis*2
+                    if yaxis == -3.0517578125e-05:
+                        yaxis = 0
+                    if yaxis == 0:
+                        player.movement[1] = 0
+                    if xaxis == 0 and yaxis == 0:
+                        player.movement = [0, 0]
+                    
+                    player.sprint = False
+                    joy_btn_sprint = joystick.get_button(1)
+                    if joy_btn_sprint and player.stamina > 0 and not player.poisoning:
+                        player.sprint = True
+                        player.stamina -= 1
+                        player.detectablebyenemies = 100
+                        player.movement[0] *= 4
+                        player.movement[1] *= 4
+                    
+                    joy_btn_menu1 = joystick.get_button(4)
+                    if joy_btn_menu1:
+                        in_menu = True
+                        menu1joy(joystick)
+                    joy_btn_menu2 = joystick.get_button(5)
+                    if joy_btn_menu2:
+                        in_menu = True
+                        menu2joy(joystick)
+                    joy_btn_menu3 = joystick.get_axis(4)
+                    if joy_btn_menu3 > 0:
+                        in_menu = True
+                        menu3joy(joystick)
+                    joy_btn_status = joystick.get_axis(5)
+                    if joy_btn_status > 0:
+                        in_menu = True
+                        status()
+
         #region
         pcollside = {"front": False, "back": False, "left": False, "right": False}
         player.irect.x += player.movement[0]
@@ -963,7 +1180,8 @@ def gameloop(loadgame=0):
                     if player.active1 > -1:
                         coll.hp -= 1
                         # speech_engine(player, coll, [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]])
-                        speech_bool = True
+                        if coll.interacted > 0:
+                            speech_bool = True
                         s_entity = coll
                         dialogue_list = [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]]
 
@@ -972,7 +1190,8 @@ def gameloop(loadgame=0):
                     else:
                         player.hp -= 1
                         # speech_engine(player, coll, [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]])
-                        speech_bool = True
+                        if coll.interacted > 0:
+                            speech_bool = True
                         s_entity = coll
                         dialogue_list = [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]]
 
@@ -1008,14 +1227,16 @@ def gameloop(loadgame=0):
                     pcoll.append(villager)
                 if villager.rect.colliderect(player.detectrect):
                     # speech_engine(player, villager, [["player", "Hello there!"], ["villager", "Hello to you too!"]])
-                    speech_bool = True
+                    if villager.interacted > 0:
+                        speech_bool = True
                     s_entity = villager
                     dialogue_list = npc_dialogues(villager)
         for npc in NPCGroup:
             if npc.rect.colliderect(player.rect):
                 pcoll.append(npc)
             if npc.rect.colliderect(player.detectrect):
-                speech_bool = True
+                if npc.interacted > 0:
+                    speech_bool = True
                 s_entity = npc
                 dialogue_list = npc_dialogues(npc)
                 
@@ -1039,7 +1260,8 @@ def gameloop(loadgame=0):
                     if player.active1 > -1:
                         coll.hp -= 1
                         # speech_engine(player, coll, [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]])
-                        speech_bool = True
+                        if coll.interacted > 0:
+                            speech_bool = True
                         s_entity = coll
                         dialogue_list = [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]]
 
@@ -1048,7 +1270,8 @@ def gameloop(loadgame=0):
                     else:
                         player.hp -= 1
                         # speech_engine(player, coll, [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]])
-                        speech_bool = True
+                        if coll.interacted > 0:
+                            speech_bool = True
                         s_entity = coll
                         dialogue_list = [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]]
 
@@ -1084,14 +1307,16 @@ def gameloop(loadgame=0):
                     pcoll.append(villager)
                 if villager.rect.colliderect(player.detectrect):
                     # speech_engine(player, villager, [["player", "Hello there!"], ["villager", "Hello to you too!"]])
-                    speech_bool = True
+                    if villager.interacted > 0:
+                        speech_bool = True
                     s_entity = villager
                     dialogue_list = npc_dialogues(villager)
         for npc in NPCGroup:
             if npc.rect.colliderect(player.rect):
                 pcoll.append(npc)
             if npc.rect.colliderect(player.detectrect):
-                speech_bool = True
+                if npc.interacted > 0:
+                    speech_bool = True
                 s_entity = npc
                 dialogue_list = npc_dialogues(npc)
         # print(pcoll)
@@ -1105,16 +1330,7 @@ def gameloop(loadgame=0):
         if speech_bool:
             global dialogue_end
             speech_engine(player, s_entity, dialogue_list)
-            if dialogue_end:
-                try:
-                    if s_entity.id == "country":
-                        try:
-                            new_mission(remaining_missions[0])
-                        except IndexError:
-                            pass
-                except AttributeError:
-                    speech_bool = False
-                dialogue_end = False   # debug this in the next stream.
+            dialogue_end = False
 
         #endregion
 
@@ -1122,33 +1338,97 @@ def gameloop(loadgame=0):
         
 def mainloop():
     running = True
+    global joysticks, controller_connected
+    controller_connected = False
+    joysticks = {}
+    selection = 0
     while running:
         pygame.display.update(); clock.tick(60)
-        for ev in pygame.event.get():
-            if ev.type == pygame.QUIT:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 running = False
                 pygame.quit()
                 sys.exit()
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 0:
+                    joystick = joysticks[event.instance_id]
+                    joystick.rumble(0, 0.7, 500)
+
+            if event.type == pygame.JOYDEVICEADDED:
+                controller_connected = True
+                joy = pygame.joystick.Joystick(event.device_index)
+                joysticks[joy.get_instance_id()] = joy
+                joystick = joysticks[0]
+                # print(f"Joystick {joy.get_instance_id()} connencted")
+
+            if event.type == pygame.JOYDEVICEREMOVED:
+                controller_connected = False
+                del joysticks[event.instance_id]
+                # print(f"Joystick {event.instance_id} disconnected")
+            if event.type == pygame.JOYAXISMOTION:
+                jam = round(joystick.get_axis(1))
+                if jam > 0 and selection < 3:
+                    selection += 1
+                elif jam < 0 and selection > 0:
+                    selection -= 1
+                for i in range(420):
+                    print("")
+                break
+            if event.type == pygame.JOYHATMOTION:
+                jam = joystick.get_hat(0)
+                if jam[1] == 1 and selection > 0:
+                    selection -= 1
+                elif jam[1] == -1 and selection < 3:
+                    selection += 1
+                break
         mx, my = pygame.mouse.get_pos()
         screen.fill((255, 255, 255))
         write(text="NODES", position=(412, 100), fontsize=60)
         pygame.draw.rect(screen, (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), (500-16, 400-32, 32, 64))
-        selrects = []
-        selrects.append(write(text="Start", position=(50, 550)))
-        selrects.append(write(text="Load", position=(50, 600)))
-        selrects.append(write(text="Settings", position=(50, 650)))
-        selrects.append(write(text="Exit", position=(50, 700)))
-        for i in range(len(selrects)):
-            if selrects[i].collidepoint(mx, my) and pygame.mouse.get_pressed()[0]:
-                if i == 0:
+        if controller_connected:
+            if selection == 0:
+                write(text="Start", position=(50, 550))
+                if joystick.get_button(0):
                     gameloop(0)
-                if i == 1:
+            else:
+                write(text="Start", position=(50, 550), color=(100, 50, 50))
+            if selection == 1:
+                write(text="Load", position=(50, 600))
+                if joystick.get_button(0):
                     gameloop(1)
-                if i == 2:
+            else:
+                write(text="Load", position=(50, 600), color=(100, 50, 50))
+            if selection == 2:
+                write(text="Settings", position=(50, 650))
+                if joystick.get_button(0):
                     pass
-                if i == 3:
+            else:
+                write(text="Settings", position=(50, 650), color=(100, 50, 50))
+            if selection == 3:
+                write(text="Exit", position=(50, 700))
+                if joystick.get_button(0):
                     pygame.quit()
                     sys.exit()
+                    
+            else:
+                write(text="Exit", position=(50, 700), color=(100, 50, 50))
+        else:
+            selrects = []
+            selrects.append(write(text="Start", position=(50, 550)))
+            selrects.append(write(text="Load", position=(50, 600)))
+            selrects.append(write(text="Settings", position=(50, 650)))
+            selrects.append(write(text="Exit", position=(50, 700)))
+            for i in range(len(selrects)):
+                if selrects[i].collidepoint(mx, my) and pygame.mouse.get_pressed()[0]:
+                    if i == 0:
+                        gameloop(0)
+                    if i == 1:
+                        gameloop(1)
+                    if i == 2:
+                        pass
+                    if i == 3:
+                        pygame.quit()
+                        sys.exit()
 
 if __name__ == '__main__':
     mainloop()
