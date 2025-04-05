@@ -48,7 +48,6 @@ def reset():
 
 reset()
 
-# # GAMEPAD CONTROLS INIT
 pygame.joystick.init()
 
 if pygame.joystick.get_count() > 0:
@@ -56,7 +55,6 @@ if pygame.joystick.get_count() > 0:
 else:
     prevkey = pygame.key.get_pressed()
 
-# timer = 300
 def speech_engine(player, entity, dialogues):
     global speech_bool, dialogue_list, s_entity, speech_index, prevkey, dialogueindex, dialoguestr, dialogue_end
     keypress = True
@@ -246,7 +244,7 @@ class Tree(Object):
             self.collidable = True
             self.rect = self.image.get_rect()
             self.image.fill((255, 0, 0))
-            self.spriteimg = pygame.image.load("pixel_trees/pixel_trees/pixel_tree_summer.png")
+            self.spriteimg = pygame.image.load("Assets/Images/pixel_trees/pixel_trees/pixel_tree_summer.png")
             self.image.blit(pygame.transform.scale(self.spriteimg, (self.rect.w, self.rect.h)), (0, 0))
             self.image.set_colorkey((255, 0, 0))
             self.outer = Tree
@@ -447,7 +445,7 @@ class Village(Object):
                 # self.rect.x = self.outer.rect.x
                 # self.rect.y = self.outer.rect.y
                 # self.image.fill((255, 0, 0))
-                self.spriteimg = pygame.image.load("house.png")
+                self.spriteimg = pygame.image.load("Assets/Images/house.png")
                 self.image.blit(pygame.transform.scale(self.spriteimg, (self.rect.w, self.rect.h)), (0, 0))
                 key = self.spriteimg.get_at((0, 0))
                 self.image.set_colorkey(key)
@@ -502,7 +500,7 @@ class LoreVillage(Village):
         self.houses = []
         self.villagers = []
         self.sprite = self.Sprite(self)
-        with open("village_map1.txt", "r") as mapfile:
+        with open("Assets/Maps/village_map1.txt", "r") as mapfile:
             text = mapfile.readlines()
             self.struct = []
             for line in text:
@@ -614,7 +612,7 @@ class Player(pygame.sprite.Sprite):
             self.collidable = True
             self.image.fill((0, 0, 0))
             self.animationvar = 0
-            self.spritesheet = pygame.image.load("8Direction_TopDown_CharacterAssets_ByBossNelNel/8Direction_TopDown_Character Sprites_ByBossNelNel/SpriteSheet.png")
+            self.spritesheet = pygame.image.load("Assets/Images/8Direction_TopDown_CharacterAssets_ByBossNelNel/8Direction_TopDown_Character Sprites_ByBossNelNel/SpriteSheet.png")
             self.rect = self.image.get_rect()
             # self.irect = self.rect
             self.outer = Player
