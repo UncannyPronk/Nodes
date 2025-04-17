@@ -1,4 +1,4 @@
-import pygame, sys, random, winsound, time as t
+import pygame, sys, random, winsound
 from pygame import *
 from pygame.locals import *
 
@@ -61,18 +61,13 @@ def speech_engine(player, entity, dialogues):
     if entity.interacted > 0:
         try:
             dialoguelen = len(dialogues[speech_index][1])
-            #region
             if dialogueindex < dialoguelen:
-                # dialogueindex += 1
-                # winsound.Beep(800, 200)
                 dialogueindex = round((lambda dialogueindex:dialogueindex + 1)(dialogueindex), 1)
                 if dialogueindex == float(int(dialogueindex)):
-                    # print(dialogueindex)
                     winsound.Beep(600, 80)
             dialoguestr = ""
             for i in range(int(dialogueindex)):
                 dialoguestr += dialogues[speech_index][1][i]
-            #endregion
             if not dialogues[speech_index][0] in name_dict.keys():
                 name_dict[dialogues[speech_index][0]] = (random.randint(120, 255), random.randint(120, 255), random.randint(120, 255))
             color = name_dict[dialogues[speech_index][0]]
@@ -81,7 +76,6 @@ def speech_engine(player, entity, dialogues):
             if not s_entity == None:
                 s_entity.movement = [0, 0]
             pygame.draw.rect(screen, (0, 0, 0), (0, 0, display_rect.w, 100))
-            # write(True, dialogues[speech_index][1], (100, 20), color, 50)
             write(True, dialoguestr, (100, 20), color, 42)
             write(True, "Press Enter", (display_rect.w - 150, 60), (255, 255, 255))
             if dialogues[speech_index][0] == "player":
@@ -89,7 +83,6 @@ def speech_engine(player, entity, dialogues):
             else:
                 screen.blit(entity.sprite.image, (30, 10))
         except IndexError:
-            # print("IndexError - An error has been triggered")
             if entity.id != "country":
                 entity.interacted = 0
             speech_bool = False
@@ -97,9 +90,6 @@ def speech_engine(player, entity, dialogues):
             dialogue_list = []
             speech_index = 0
 
-        # for ev in pygame.event.get():
-        #     if ev.type == KEYDOWN and ev.key == K_RETURN:
-        #         speech_index += 1
         if keypress:
             if controller_connected:
                 joybtnpressed = joysticks[0].get_button(0)
@@ -114,16 +104,6 @@ def speech_engine(player, entity, dialogues):
                 if not joybtnpressed and prevkey:
                     keypress = True
                 prevkey = joybtnpressed
-                # for event in pygame.event.get():
-                #     if event.type == pygame.JOYBUTTONDOWN:
-                #         if event.button == 0:
-                #             if dialogueindex == dialoguelen:
-                #                 speech_index += 1
-                #                 dialogueindex = 0
-                #                 keypress = False
-                #             else:
-                #                 dialogueindex = dialoguelen
-                #                 keypress = False
             else:
                 keyspressed = pygame.key.get_pressed()
                 if keyspressed[K_RETURN] and not prevkey[K_RETURN]:
@@ -177,6 +157,9 @@ def npc_dialogues(entity):
 bg = pygame.Surface((display_rect.w, display_rect.h))
 bg.fill((0, 0, 0))
 bg.set_alpha(0)
+
+graphcooldown = 0
+
 def new_mission(mission=None):
     wait = 0
     if not mission in finished_missions:
@@ -210,7 +193,6 @@ def new_mission(mission=None):
         finished_missions.append(mission)
         remaining_missions.remove(mission)
 
-#region[rgba(0, 0, 0, 0.6)]
 class Object(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
@@ -219,9 +201,7 @@ class Object(pygame.sprite.Sprite):
         self.image.fill((0, 0, 0))
         self.rect = self.image.get_rect()
         self.irect = self.rect
-#endregion
 
-#region[rgb(0, 50, 15)]
 class Tree(Object):
     def __init__(self, x, y):
         Object.__init__(self)
@@ -252,9 +232,7 @@ class Tree(Object):
         def update(self, **kwargs):
             self.rect.x = self.outer.rect.x - 32 - scroll[0]
             self.rect.bottom = self.outer.rect.bottom - scroll[1]
-#endregion
 
-#region[rgb(50, 30, 30)]
 class Character(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
@@ -287,9 +265,7 @@ class Character(pygame.sprite.Sprite):
         def update(self, **kwargs):
             self.rect.x = self.outer.rect.x - 4 - scroll[0]
             self.rect.bottom = self.outer.rect.bottom - scroll[1]
-#endregion
 
-#region[rgba(100, 100, 0, 0.4)]
 class Village(Object):
     def __init__(self, x, y):
         Object.__init__(self)
@@ -323,19 +299,17 @@ class Village(Object):
             elif villager.rect.bottom > self.sprite.rect.bottom - 16:
                 villager.rect.bottom = self.sprite.rect.bottom - 16
                 villager.movement[1] = -1
-            # print(villager.mv, " --- ", villager.movement, " - ", villager.sprite.rect.topleft)
 
-            #region[rgba(180, 40, 0, 0.2)]
             vcollside = {"front": False, "back": False, "left": False, "right": False}
             villager.irect.x += villager.movement[0]
-            # vcoll = pygame.sprite.spritecollide(villager, self.houses, False)
+            
             vcoll = []
             for house in self.houses:
                 if villager.rect.colliderect(house.rect):
                     vcoll.append(house)
                 if villager.rect.colliderect(player.rect):
                     vcoll.append(player)
-                    # print(house)
+                    
             for coll in vcoll:
                 if villager.movement[0] > 0:
                     vcollside["right"] = True
@@ -347,14 +321,13 @@ class Village(Object):
                     villager.movement[0] = 1
 
             villager.irect.y += villager.movement[1]
-            # vcoll = pygame.sprite.spritecollide(villager, self.houses, False)
+            
             vcoll = []
             for house in self.houses:
                 if villager.rect.colliderect(house.rect):
                     vcoll.append(house)
                 if villager.rect.colliderect(player.rect):
                     vcoll.append(player)
-                    # print(house)
             for coll in vcoll:
                 if villager.movement[1] > 0:
                     vcollside["back"] = True
@@ -364,11 +337,6 @@ class Village(Object):
                     vcollside["front"] = True
                     villager.rect.y = coll.rect.bottom
                     villager.movement[1] = 1
-            #endregion
-            # villager.rect.x = villager.irect.x
-            # villager.rect.y = villager.irect.y
-            # villager.sprite.rect.x = villager.rect.x + 4 + scroll[0]
-            # villager.sprite.rect.bottom = villager.rect.bottom + scroll[1]
 
     class Sprite(pygame.sprite.Sprite):
         def __init__(self, Village):
@@ -415,10 +383,6 @@ class Village(Object):
                 house.sprite.rect.bottom = house.rect.bottom
             self.image.fill((120, 180, 140))
             pygame.draw.rect(self.image, (255, 200, 0), (0, 0, self.rect.width, self.rect.height), 16)
-            # for house in self.outer.houses:
-            #     pygame.draw.rect(self.image, (255, 0, 0), house.sprite.rect)
-            # for villager in self.outer.villagers:
-            #     pygame.draw.rect(self.image, (0, 0, 20), villager.sprite.rect)
 
     class House(Object):
         def __init__(self, Village, x, y):
@@ -431,10 +395,6 @@ class Village(Object):
             self.rect.y = y
             self.irect = self.rect
             self.sprite = self.Sprite(self)
-        
-        # def update(self, **kwargs):
-        #     self.rect.x = self.irect.x - scroll[0]
-        #     self.rect.y = self.irect.y - scroll[1]
 
         class Sprite(pygame.sprite.Sprite):
             def __init__(self, House):
@@ -442,17 +402,11 @@ class Village(Object):
                 self.outer = House
                 self.image = pygame.Surface((256, 384))
                 self.rect = self.image.get_rect()
-                # self.rect.x = self.outer.rect.x
-                # self.rect.y = self.outer.rect.y
-                # self.image.fill((255, 0, 0))
                 self.spriteimg = pygame.image.load("Assets/Images/house.png")
                 self.image.blit(pygame.transform.scale(self.spriteimg, (self.rect.w, self.rect.h)), (0, 0))
                 key = self.spriteimg.get_at((0, 0))
                 self.image.set_colorkey(key)
-            
-            # def update(self, **kwargs):
-            #     self.rect.x = self.outer.rect.x
-            #     self.rect.y = self.outer.rect.bottom - 128
+
     class Villager(Character):
         def __init__(self, Village, x, y):
             Character.__init__(self, x, y)
@@ -481,12 +435,6 @@ class Village(Object):
                 self.rect.x = self.outer.rect.x
                 self.rect.y = self.outer.rect.y
             
-            # def update(self, **kwargs):
-            #     self.rect.x = self.outer.rect.x - 4 - scroll[0]
-            #     self.rect.bottom = self.outer.rect.bottom - scroll[1]
-#endregion
-
-#region[rgba(60, 40, 0, 1)]
 class LoreVillage(Village):
     def __init__(self, x, y):
         Village.__init__(self, x, y)
@@ -544,16 +492,7 @@ class LoreVillage(Village):
                 house.sprite.rect.bottom = house.rect.bottom
             self.image.fill((120, 180, 140))
             pygame.draw.rect(self.image, (255, 200, 0), (0, 0, self.rect.width, self.rect.height), 16)
-            # for house in self.outer.houses:
-            #     pygame.draw.rect(self.image, (255, 0, 0), house.sprite.rect)
-            # for villager in self.outer.villagers:
-            #     pygame.draw.rect(self.image, (0, 0, 20), villager.sprite.rect)
 
-
-
-#endregion
-
-#region[rgb(20, 40, 60)]
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
@@ -573,6 +512,8 @@ class Player(pygame.sprite.Sprite):
         self.sleep = False ### implement later
         self.sprite = self.Sprite(self)
 
+        self.inv = ["Sword", "Gun", "Fire"]
+        self.invactive = -1
         #short range weapons
         self.inv1 = ["Sword"]
         self.active1 = -1
@@ -591,9 +532,7 @@ class Player(pygame.sprite.Sprite):
         if self.movement == [0, 0] and self.stamina < 300:
             self.stamina += 1
         
-        #region
         self.stamina = 300 #remove after production
-        #endregion
 
         if self.paralysis:
             self.paralysis_time -= 1
@@ -614,7 +553,6 @@ class Player(pygame.sprite.Sprite):
             self.animationvar = 0
             self.spritesheet = pygame.image.load("Assets/Images/8Direction_TopDown_CharacterAssets_ByBossNelNel/8Direction_TopDown_Character Sprites_ByBossNelNel/SpriteSheet.png")
             self.rect = self.image.get_rect()
-            # self.irect = self.rect
             self.outer = Player
         
         def update(self, **kwargs):
@@ -656,73 +594,67 @@ class Player(pygame.sprite.Sprite):
             self.image.set_colorkey((0, 255, 0))
             self.rect.x = self.outer.rect.x - 4
             self.rect.bottom = self.outer.rect.bottom
-            # self.image.fill((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
 
-#endregion
+# def drawbg(x, y):
+#     maplist = []
+#     trees = []
+#     with open("Assets/Maps/area_1.txt") as mapfile:
+#         text = mapfile.readlines()
+#         for i in range(len(text)):
+#             linelist = []
+#             for j in range(len(text[i])):
+#                 if text[i][j] != "\n":
+#                     linelist.append(int(text[i][j]))
+#                 if text[i][j] == "1":
+#                     if i%2 == 0 and j%2 == 0:
+#                         trees.append(Tree(j*64 + x, i*32 + y))
+#                     else:
+#                         trees.append(Tree(j*64 + x + random.randint(-2, 2)*8, i*32 + y + random.randint(-1, 1)*4))
+#                     ObjectGroup.add(trees[-1])
+#                     SpriteGroup.add(trees[-1].sprite)
+#             maplist.append(linelist)
+#     return maplist
 
-#region[rgb(30, 30, 30)]
 def gameloop(loadgame=0):
-    #region
     global scroll, player, controller_connected
     global speech_bool, dialogue_list, s_entity
 
     player = Player()
     player.add(PlayerGroup)
     player.sprite.add(SpriteGroup)
-    # player.hitbox.add(HitBoxGroup)
-    player.sprite.rect.center = 500, 400
+    player.sprite.rect.center = 1000, 800
+
     pygame.mouse.set_pos(500, 400)
 
-    lore1v = LoreVillage(3000, -800)
-    lore1v.add(VillageGroup)
-    lore1v.sprite.add(SpriteGroup)
-    lore1v.villagers[0].id = "ruined"
-    lore1v.villagers[0].sprite.color = (255, 0, 255)
-    lore1v.villagers[1].id = "country"
-    lore1v.villagers[1].sprite.color = (10, 255, 10)
+    # guide1 = Character(100, 0)
+    # guide1.add(NPCGroup)
+    # guide1.sprite.add(SpriteGroup)
+    # guide1.sprite.image.fill((255, 255, 0))
+    # guide1.id = "guide1"
 
-    guide1 = Character(100, 0)
-    guide1.add(NPCGroup)
-    guide1.sprite.add(SpriteGroup)
-    guide1.sprite.image.fill((255, 255, 0))
-    guide1.id = "guide1"
+    # lore1v = LoreVillage(3000, -800)
+    # lore1v.add(VillageGroup)
+    # lore1v.sprite.add(SpriteGroup)
+    # lore1v.villagers[0].id = "ruined"
+    # lore1v.villagers[0].sprite.color = (255, 0, 255)
+    # lore1v.villagers[1].id = "country"
+    # lore1v.villagers[1].sprite.color = (10, 255, 10)
 
-    # for houses in village.houses:
-    #     houses.sprite.add(SpriteGroup)
-    # for villager in village.villagers:
-    #     villager.sprite.add(SpriteGroup)
+    # enemylist = []
+    # for i in range(4):
+    #     x = random.randint(-800, 800)
+    #     y = random.randint(-800, 800)
+    #     for village in VillageGroup:
+    #         while village.rect.colliderect(Rect(x, y, 32, 64)):
+    #             x = random.randint(-800, 800)
+    #             y = random.randint(-800, 800)
+    #     enemylist.append(Character(x, y))
 
-
-    enemylist = []
-    for i in range(4):
-        x = random.randint(-800, 800)
-        y = random.randint(-800, 800)
-        for village in VillageGroup:
-            while village.rect.colliderect(Rect(x, y, 32, 64)):
-                x = random.randint(-800, 800)
-                y = random.randint(-800, 800)
-        enemylist.append(Character(x, y))
-
-    for enemy in enemylist:
-        enemy.hostile = True
-        enemy.id = "enemy"
-        enemy.add(EnemyGroup)
-        enemy.sprite.add(SpriteGroup)
-
-    trees = []
-    for i in range(8):
-        x = random.randint(-800, 800)
-        y = random.randint(-800, 800)
-        for village in VillageGroup:
-            while village.rect.colliderect(Rect(x, y, 128, 244)):
-                x = random.randint(-800, 800)
-                y = random.randint(-800, 800)
-        trees.append(Tree(x, y))
-
-    for tree in trees:
-        tree.add(ObjectGroup)
-        tree.sprite.add(SpriteGroup)
-        # print(tree.rect.topleft)
+    # for enemy in enemylist:
+    #     enemy.hostile = True
+    #     enemy.id = "enemy"
+    #     enemy.add(EnemyGroup)
+    #     enemy.sprite.add(SpriteGroup)
 
     running = True
 
@@ -732,18 +664,18 @@ def gameloop(loadgame=0):
 
     bg = pygame.Surface((display_rect.w, display_rect.h))
     bg.fill((0, 0, 0))
-    bg.set_alpha(0)
+    bg.set_alpha(200)
+
+    # drawbg(-400, -80)
 
     def blit(group):
         order = []
         for item in group:
-            # print(type(item.outer))
             if type(item.outer) == Village or type(item.outer) == LoreVillage:
                 for house in item.outer.houses:
                     order.append(house.sprite)
                 for villager in item.outer.villagers:
                     order.append(villager.sprite)
-            # else:
             order.append(item)
         n = len(order)
         for i in range(n):
@@ -753,186 +685,37 @@ def gameloop(loadgame=0):
         for i in range(n):
             screen.blit(order[i].image, order[i].rect)
 
-    #endregion
-
     #region
-    def menu1():
-        if bg.get_alpha() < 200:
-            bg.set_alpha(bg.get_alpha() + 20)
 
+    def graph(joystick):
+        global graphcooldown
         screen.blit(bg, (0, 0))
-        if player.active1 > -1:
-            for i in range(len(player.inv1)):
-                if player.active1 == i:
-                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
-        pygame.draw.rect(screen, (100, 100, 100), (400, 600, 200, 100))
-        if Rect(400, 600, 200, 100).collidepoint(pygame.mouse.get_pos()) and player.active1 != -1:
-            write(text="Player", position=(425, 610), fontsize=60, color=(255, 255, 255))
-            if pygame.mouse.get_pressed()[0]:
-                player.active1 = -1
-        else:
-            write(text="Player", position=(425, 610), fontsize=60)
-
-        for i in range(len(player.inv1)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
-            if Rect(50 + 100*i, 200, 200, 100).collidepoint(pygame.mouse.get_pos()):
-                write(text=player.inv1[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
-                if pygame.mouse.get_pressed()[0]:
-                    player.active1 = i
-            else:
-                write(text=player.inv1[i], position=(75 + 300*i, 210), fontsize=60)
-        pygame.draw.line(screen, (255, 255, 255), (500, 600), pygame.mouse.get_pos(), 3)
-
-    def menu1joy(joystick):
-        if bg.get_alpha() < 200:
-            bg.set_alpha(bg.get_alpha() + 20)
-
-        screen.blit(bg, (0, 0))
-        if player.active1 > -1:
-            for i in range(len(player.inv1)):
-                if player.active1 == i:
-                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
         if joystick.get_button(3):
-            player.active1 = -1
-        for ev in pygame.event.get():
-            if ev.type == pygame.JOYAXISMOTION:
-                if joystick.get_axis(2) > 0:
-                    if player.active1 < len(player.inv1) - 1:
-                        player.active1 += 1
-                    else:
-                        player.active1 = 0
-                if joystick.get_axis(2) < 0:
-                    if player.active1 > 0:
-                        player.active1 -= 1
-                    else:
-                        player.active1 = len(player.inv1) - 1
-                print(player.active1)
-        for i in range(len(player.inv1)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
-            if player.active1 == i:
-                write(text=player.inv1[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
-            else:
-                write(text=player.inv1[i], position=(75 + 300*i, 210), fontsize=60)
-
-    def menu2():
-        if bg.get_alpha() < 200:
-            bg.set_alpha(bg.get_alpha() + 20)
-
-        screen.blit(bg, (0, 0))
-        if player.active2 > -1:
-            for i in range(len(player.inv2)):
-                if player.active2 == i:
-                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
-        pygame.draw.rect(screen, (100, 100, 100), (400, 600, 200, 100))
-        if Rect(400, 600, 200, 100).collidepoint(pygame.mouse.get_pos()) and player.active2 != -1:
-            write(text="Player", position=(425, 610), fontsize=60, color=(255, 255, 255))
-            if pygame.mouse.get_pressed()[0]:
-                player.active2 = -1
+            player.invactive = -1
+        if graphcooldown == 0:
+            if joystick.get_axis(0) > 0:
+                if player.invactive < len(player.inv) - 1:
+                    player.invactive += 1
+                    graphcooldown = 12
+            if joystick.get_axis(0) < 0:
+                if player.invactive > 0:
+                    player.invactive -= 1
+                    graphcooldown = 12
         else:
-            write(text="Player", position=(425, 610), fontsize=60)
-
-        for i in range(len(player.inv2)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
-            if Rect(50 + 100*i, 200, 200, 100).collidepoint(pygame.mouse.get_pos()):
-                write(text=player.inv2[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
-                if pygame.mouse.get_pressed()[0]:
-                    player.active2 = i
+            graphcooldown -= 1
+        for i in range(len(player.inv)):
+            pygame.draw.rect(screen, (140, 100, 100), (50 + 120*i, 50, 100, 60))
+            if player.invactive == i:
+                write(text=player.inv[i], position=(60 + 120*i, 60), fontsize=30, color=(255, 255, 255))
             else:
-                write(text=player.inv2[i], position=(75 + 300*i, 210), fontsize=60)
-        pygame.draw.line(screen, (255, 255, 255), (500, 600), pygame.mouse.get_pos(), 3)
-    def menu2joy(joystick):
-        if bg.get_alpha() < 200:
-            bg.set_alpha(bg.get_alpha() + 20)
+                write(text=player.inv[i], position=(60 + 120*i, 60), fontsize=30)
+            
+        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 100, display_rect.centery - 50, 50, 50), 1)
+        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx + 50, display_rect.centery - 50, 50, 50), 1)
+        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 25, display_rect.centery - 125, 50, 50), 1)
+        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 25, display_rect.centery + 30, 50, 50), 1)
 
-        screen.blit(bg, (0, 0))
-        if player.active2 > -1:
-            for i in range(len(player.inv2)):
-                if player.active2 == i:
-                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
-        if joystick.get_button(3):
-            player.active2 = -1
-        for ev in pygame.event.get():
-            if ev.type == pygame.JOYAXISMOTION:
-                if joystick.get_axis(2) > 0:
-                    if player.active2 < len(player.inv2) - 1:
-                        player.active2 += 1
-                    else:
-                        player.active2 = 0
-                if joystick.get_axis(2) < 0:
-                    if player.active2 > 0:
-                        player.active2 -= 1
-                    else:
-                        player.active1 = len(player.inv2) - 1
-                print(player.active2)
-        for i in range(len(player.inv2)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
-            if player.active2 == i:
-                write(text=player.inv2[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
-            else:
-                write(text=player.inv2[i], position=(75 + 300*i, 210), fontsize=60)
-    def menu3():
-        if bg.get_alpha() < 200:
-            bg.set_alpha(bg.get_alpha() + 20)
-
-        screen.blit(bg, (0, 0))
-        if player.active3 > -1:
-            for i in range(len(player.inv3)):
-                if player.active3 == i:
-                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
-        pygame.draw.rect(screen, (100, 100, 100), (400, 600, 200, 100))
-        if Rect(400, 600, 200, 100).collidepoint(pygame.mouse.get_pos()) and player.active3 != -1:
-            write(text="Player", position=(425, 610), fontsize=60, color=(255, 255, 255))
-            if pygame.mouse.get_pressed()[0]:
-                player.active3 = -1
-        else:
-            write(text="Player", position=(425, 610), fontsize=60)
-
-        for i in range(len(player.inv3)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
-            if Rect(50 + 300*i, 200, 200, 100).collidepoint(pygame.mouse.get_pos()):
-                write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
-                if pygame.mouse.get_pressed()[0]:
-                    player.active3 = i
-            else:
-                write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60)
-        pygame.draw.line(screen, (255, 255, 255), (500, 600), pygame.mouse.get_pos(), 3)
-    def menu3joy(joystick):
-        if bg.get_alpha() < 200:
-            bg.set_alpha(bg.get_alpha() + 20)
-
-        screen.blit(bg, (0, 0))
-        if player.active3 > -1:
-            for i in range(len(player.inv3)):
-                if player.active3 == i:
-                    pygame.draw.line(screen, (180, 180, 180), (500, 600), (150 + 300*i, 200), 8)
-        # if joystick.get_button(3):
-        #     player.active3 = -1
-        for ev in pygame.event.get():
-            if ev.type == pygame.JOYAXISMOTION:
-                if joystick.get_axis(2) > 0:
-                    if player.active3 < len(player.inv3) - 1:
-                        player.active3 += 1
-                    else:
-                        player.active3 = 0
-                elif joystick.get_axis(2) < 0:
-                    if player.active3 > 0:
-                        player.active3 -= 1
-                    else:
-                        player.active3 = len(player.inv3) - 1
-                else:
-                    player.active3 = -1
-                for i in range(420):
-                    print("")
-                # print(player.active3)
-        for i in range(len(player.inv3)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 300*i, 200, 200, 100))
-            if player.active3 == i:
-                write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60, color=(255, 255, 255))
-            else:
-                write(text=player.inv3[i], position=(75 + 300*i, 210), fontsize=60)
     def status():
-        if bg.get_alpha() < 200:
-            bg.set_alpha(bg.get_alpha() + 20)
         screen.blit(bg, (0, 0))
         #region
         #hp
@@ -979,21 +762,9 @@ def gameloop(loadgame=0):
         #also show stamina bar and status effects
     #endregion
 
-    while running:
+    while running:                                                          ### GAMELOOP START ###
         if player.detectablebyenemies > 0:
             player.detectablebyenemies -= 0.2
-        # for enemy in EnemyGroup:
-        #     if enemy.hostile:
-        #         p_distance = math.sqrt((enemy.rect.x - player.rect.x)**2 + (enemy.rect.y - player.rect.y)**2)
-        #         if p_distance < 10:
-        #             if enemy.rect.centerx < player.rect.centerx:
-        #                 enemy.rect.x += 1
-        #             elif enemy.rect.centerx > player.rect.centerx:
-        #                 enemy.rect.x -= 1
-        #             if enemy.rect.centery < player.rect.centery:
-        #                 enemy.rect.y += 1
-        #             elif enemy.rect.centery > player.rect.centery:
-        #                 enemy.rect.y -= 1
         scroll[0] += (player.irect.x - scroll[0] - (500-player.irect.w/2))
         scroll[1] += (player.irect.y - scroll[1] - (400-player.irect.h/2))
         display_rect.x, display_rect.y = scroll[0], scroll[1]
@@ -1007,24 +778,18 @@ def gameloop(loadgame=0):
                 if ev.key == pygame.K_a or ev.key == pygame.K_s or ev.key == pygame.K_d:
                     pygame.mouse.set_pos(500, 650)
             if ev.type == pygame.JOYBUTTONDOWN:
-                # print("Joystick button pressed.")
                 if ev.button == 1:
                     joystick = joysticks[ev.instance_id]
                     joystick.rumble(0, 0.5, 150)
-                        # print(f"Rumble effect played on joystick {ev.instance_id}")
-            # if ev.type == pygame.JOYBUTTONUP:
-                # print("Joystick button released.")
             if ev.type == pygame.JOYDEVICEADDED:
                 controller_connected = True
                 joy = pygame.joystick.Joystick(ev.device_index)
                 joysticks[joy.get_instance_id()] = joy
-                # print(f"Joystick {joy.get_instance_id()} connencted")
             if ev.type == pygame.JOYDEVICEREMOVED:
                 controller_connected = False
                 del joysticks[ev.instance_id]
-                # print(f"Joystick {ev.instance_id} disconnected")
     
-        screen.fill((0, 255, 120))
+        screen.fill((0, 160, 80))
         blit(SpriteGroup)
         ObjectGroup.update()
         EnemyGroup.update()
@@ -1042,13 +807,7 @@ def gameloop(loadgame=0):
                     status()
                 elif keys_pressed[K_a]:
                     in_menu = True
-                    menu1()
-                elif keys_pressed[K_s]:
-                    in_menu = True
-                    menu2()
-                elif keys_pressed[K_d]:
-                    in_menu = True
-                    menu3()
+                    graph()
                 else:
                     in_menu = False
                     bg.set_alpha(0)
@@ -1068,7 +827,6 @@ def gameloop(loadgame=0):
                         else:
                             if player.movement[0] > 2:
                                 player.movement[0] -= 0.5
-                        # print(mx - player.irect.center[0])
                     elif player.irect.x > mx:
                         if player.movement[0] > -2:
                             player.movement[0] -= (player.irect.center[0] - mx)/800
@@ -1078,9 +836,7 @@ def gameloop(loadgame=0):
                         else:
                             if player.movement[0] < -2:
                                 player.movement[0] += 0.5
-                        # print(player.irect.center[0] - mx)
                     else:
-                        # print(player.movement[0])
                         if 2 > player.movement[0] > 0:
                             player.movement[0] -= 0.5
                         if -2 < player.movement[0] < 0:
@@ -1097,7 +853,6 @@ def gameloop(loadgame=0):
                         else:
                             if player.movement[1] > 2:
                                 player.movement[1] -= 0.5
-                        # print(my - player.irect.center[1])
                     elif player.irect.y > my:
                         if player.movement[1] > -2:
                             player.movement[1] -= (player.irect.center[1] - my)/800
@@ -1107,9 +862,7 @@ def gameloop(loadgame=0):
                         else:
                             if player.movement[1] < -2:
                                 player.movement[1] += 0.5
-                        # print(player.irect.center[1] - my)
                     else:
-                        # print(player.movement[1])
                         if 2 > player.movement[1] > 0:
                             player.movement[1] -= 0.5
                         if -2 < player.movement[1] < 0:
@@ -1124,21 +877,20 @@ def gameloop(loadgame=0):
                     if joystick.get_button(7):
                         reset()
                         running = False
-                    # axes = joystick.get_numaxes()
-                    # for i in range(axes):
-                    xaxis = joystick.get_axis(0)
-                    player.movement[0] = xaxis*2
-                    if xaxis == 0:
-                        player.movement[0] = 0
-                    yaxis = joystick.get_axis(1)
-                    player.movement[1] = yaxis*2
-                    if yaxis == -3.0517578125e-05:
-                        yaxis = 0
-                    if yaxis == 0:
-                        player.movement[1] = 0
-                    if xaxis == 0 and yaxis == 0:
-                        player.movement = [0, 0]
-                    
+                    if not in_menu:
+                        xaxis = joystick.get_axis(0)
+                        player.movement[0] = xaxis*2
+                        if xaxis == 0:
+                            player.movement[0] = 0
+                        yaxis = joystick.get_axis(1)
+                        player.movement[1] = yaxis*2
+                        if yaxis == -3.0517578125e-05:
+                            yaxis = 0
+                        if yaxis == 0:
+                            player.movement[1] = 0
+                        if xaxis == 0 and yaxis == 0:
+                            player.movement = [0, 0]
+                        
                     player.sprint = False
                     joy_btn_sprint = joystick.get_button(1)
                     if joy_btn_sprint and player.stamina > 0 and not player.poisoning:
@@ -1151,16 +903,16 @@ def gameloop(loadgame=0):
                     joy_btn_menu1 = joystick.get_button(4)
                     if joy_btn_menu1:
                         in_menu = True
-                        menu1joy(joystick)
-                    joy_btn_menu2 = joystick.get_button(5)
-                    if joy_btn_menu2:
-                        in_menu = True
-                        menu2joy(joystick)
-                    joy_btn_menu3 = joystick.get_axis(4)
-                    if joy_btn_menu3 > 0:
-                        in_menu = True
-                        menu3joy(joystick)
-                    joy_btn_status = joystick.get_axis(5)
+                        graph(joystick)
+                    # joy_btn_menu2 = joystick.get_button(5)
+                    # if joy_btn_menu2:
+                    #     in_menu = True
+                    #     menu2joy(joystick)
+                    # joy_btn_menu3 = joystick.get_axis(5)
+                    # if joy_btn_menu3 > 0:
+                    #     in_menu = True
+                    #     menu3joy(joystick)
+                    joy_btn_status = joystick.get_axis(4)
                     if joy_btn_status > 0:
                         in_menu = True
                         status()
@@ -1173,41 +925,20 @@ def gameloop(loadgame=0):
         for coll in ecoll:
             if coll.type == "npc":
                 if coll.hostile:
-                    # print("enemy detected")
-                    # if (pcollside["front"] and player.movement[1] < 0) or (pcollside["back"] and player.movement[1] > 0) or(pcollside["left"] and player.movement[0] < 0) or (pcollside["right"] and player.movement[0] > 0):
                     if player.active1 > -1:
                         coll.hp -= 1
-                        # speech_engine(player, coll, [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]])
                         if coll.interacted > 0:
                             speech_bool = True
                         s_entity = coll
-                        dialogue_list = [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]]
-
-                        # coll.movement[0] = -coll.movement[0]
-                        # coll.movement[1] = -coll.mov  ement[1]
                     else:
                         player.hp -= 1
-                        # speech_engine(player, coll, [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]])
                         if coll.interacted > 0:
                             speech_bool = True
                         s_entity = coll
-                        dialogue_list = [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]]
 
                         # player.paralysis = True
                         # player.poisoning = True
                         # player.burning = True
-
-                        # if player.rect.x > coll.rect.x:
-                        #     coll.rect.x += 2
-                        # elif player.rect.x < coll.rect.x:
-                        #     coll.rect.x -= 2
-
-                        # player.movement[0] = -player.movement[0]
-                        # player.movement[1] = -player.movement[1]
-                    # else:
-                    #     player.hp -= 10
-                    #     player.movement[0] = -player.movement[0]
-                    #     player.movement[1] = -player.movement[1]
                     if coll.hp <= 0:
                         SpriteGroup.remove(coll.sprite)
                         EnemyGroup.remove(coll)
@@ -1253,41 +984,20 @@ def gameloop(loadgame=0):
         for coll in ecoll:
             if coll.type == "npc":
                 if coll.hostile:
-                    # print("enemy detected")     
-                    # if (pcollside["front"] and player.movement[1] < 0) or (pcollside["back"] and player.movement[1] > 0) or(pcollside["left"] and player.movement[0] < 0) or (pcollside["right"] and player.movement[0] > 0):
                     if player.active1 > -1:
                         coll.hp -= 1
-                        # speech_engine(player, coll, [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]])
                         if coll.interacted > 0:
                             speech_bool = True
                         s_entity = coll
-                        dialogue_list = [["player", "Haha eat this!"], ["enemy", "Ouch! you will pay for this."], ["player", "Let's see about that"], ["enemy", "Grrrrrr..."]]
-
-                        # coll.movement[0] = -coll.movement[0]
-                        # coll.movement[1] = -coll.movement[1]
                     else:
                         player.hp -= 1
-                        # speech_engine(player, coll, [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]])
                         if coll.interacted > 0:
                             speech_bool = True
                         s_entity = coll
-                        dialogue_list = [["player", "Ouch!"], ["enemy", "Get lost!"], ["player", "I'll come back for you."], ["enemy", "..."]]
 
                         # player.paralysis = True
                         # player.poisoning = True
                         # player.burning = True
-
-                        # if player.rect.y > coll.rect.y:
-                        #     coll.rect.y += 2
-                        # elif player.rect.y < coll.rect.y:
-                        #     coll.rect.y -= 2
-
-                        # player.movement[0] = -player.movement[0]
-                        # player.movement[1] = -player.movement[1]
-                    # else:
-                    #     player.hp -= 10
-                    #     player.movement[0] = -player.movement[0]
-                    #     player.movement[1] = -player.movement[1]
                     if coll.hp <= 0:
                         SpriteGroup.remove(coll.sprite)
                         EnemyGroup.remove(coll)
@@ -1304,7 +1014,6 @@ def gameloop(loadgame=0):
                 if villager.rect.colliderect(player.rect):
                     pcoll.append(villager)
                 if villager.rect.colliderect(player.detectrect):
-                    # speech_engine(player, villager, [["player", "Hello there!"], ["villager", "Hello to you too!"]])
                     if villager.interacted > 0:
                         speech_bool = True
                     s_entity = villager
@@ -1357,12 +1066,12 @@ def mainloop():
                 joy = pygame.joystick.Joystick(event.device_index)
                 joysticks[joy.get_instance_id()] = joy
                 joystick = joysticks[0]
-                # print(f"Joystick {joy.get_instance_id()} connencted")
+                pygame.mouse.set_visible(False)
 
             if event.type == pygame.JOYDEVICEREMOVED:
                 controller_connected = False
                 del joysticks[event.instance_id]
-                # print(f"Joystick {event.instance_id} disconnected")
+                pygame.mouse.set_visible(True)
             if event.type == pygame.JOYAXISMOTION:
                 jam = round(joystick.get_axis(1))
                 if jam > 0 and selection < 3:
