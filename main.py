@@ -56,7 +56,7 @@ else:
     prevkey = pygame.key.get_pressed()
 
 def speech_engine(player, entity, dialogues):
-    global speech_bool, dialogue_list, s_entity, speech_index, prevkey, dialogueindex, dialoguestr, dialogue_end
+    global speech_bool, dialogue_list, s_entity, speech_index, prevkey, dialogueindex, dialoguestr, dialogue_end, phase
     keypress = True
     if entity.interacted > 0:
         try:
@@ -128,6 +128,8 @@ def speech_engine(player, entity, dialogues):
                     new_mission(remaining_missions[0])
                 except IndexError:
                     pass
+            if entity.id == "guide1" and level == 0:
+                phase += 1
             if player.rect.centerx < entity.rect.centerx:
                 player.rect.right = entity.rect.x - 12
             else:
@@ -159,6 +161,9 @@ bg.fill((0, 0, 0))
 bg.set_alpha(0)
 
 graphcooldown = 0
+
+level = 0
+phase = 0
 
 def new_mission(mission=None):
     wait = 0
@@ -619,12 +624,6 @@ def gameloop(loadgame=0):
 
     pygame.mouse.set_pos(500, 400)
 
-    # guide1 = Character(100, 0)
-    # guide1.add(NPCGroup)
-    # guide1.sprite.add(SpriteGroup)
-    # guide1.sprite.image.fill((255, 255, 0))
-    # guide1.id = "guide1"
-
     # lore1v = LoreVillage(3000, -800)
     # lore1v.add(VillageGroup)
     # lore1v.sprite.add(SpriteGroup)
@@ -890,6 +889,7 @@ def gameloop(loadgame=0):
     #endregion
 
     x_seek, y_seek = 0, 0
+    guide1 = None
 
     while running:                                                          ### GAMELOOP START ###
         if player.detectablebyenemies > 0:
@@ -919,6 +919,21 @@ def gameloop(loadgame=0):
             if ev.type == pygame.JOYDEVICEREMOVED:
                 controller_connected = False
                 del joysticks[ev.instance_id]
+                                                                                                                                
+        if not guide1 in NPCGroup:
+            if level == 0 and phase == 0:
+                guide1 = Character(100, 0)
+                guide1.add(NPCGroup)
+                guide1.sprite.add(SpriteGroup)
+                guide1.sprite.image.fill((255, 255, 0))
+                guide1.id = "guide1"
+        try:
+            if not (level == 0 and phase == 0):
+                SpriteGroup.remove(guide1.sprite)
+                NPCGroup.remove(guide1)
+                guide1 = None
+        except AttributeError:
+            pass
     
         screen.fill((0, 160, 80))
         blit(SpriteGroup)
