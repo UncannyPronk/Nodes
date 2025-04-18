@@ -150,7 +150,7 @@ def npc_dialogues(entity):
         else:
             dialogue_list = [["country", "I'm too old to fight."], ["player", "You can take a back seat."], ["player", "I'll handle this."], ["country", "You're just a kid..."], ["country", "Talk to that other guy in that back"], ["country", "He will tell you that this"], ["country", "ain't no child's game."]]
     elif entity.id == "guide1":
-        dialogue_list = [["guide1", "You appear to be lost."], ["player", "I'm not exactly lost..."], ["player", "but I am low on resources."], ["guide1", "Keep heading EAST till you find a village."], ["guide1", "Salvation is nearing us..."], ["player", "What?"], ["guide1", "Nothing. Keep heading EAST."]]
+        dialogue_list = [["guide1", "You appear to be lost."], ["player", "I'm not exactly lost..."], ["player", "but I am low on resources."], ["guide1", "Follow your sense of justice."], ["guide1", "Salvation is nearing us..."], ["player", "What?"], ["guide1", "Nothing. Keep going forward."]]
 
     return dialogue_list
 
@@ -512,17 +512,10 @@ class Player(pygame.sprite.Sprite):
         self.sleep = False ### implement later
         self.sprite = self.Sprite(self)
 
-        self.inv = ["Sword", "Gun", "Fire"]
+        self.connections = [[None, []], [None, []], [None, []], [None, []]]
+
+        self.inv = [["Blade", True], ["Bow", True], ["Flame", True], ["Tamas", True], ["Dash", True], ["Ripple", True], ["Frost", True], ["Poison", True], ["Thunder", True], ["Shield", True], ["Teleport", True], ["Kaal", True]]
         self.invactive = -1
-        #short range weapons
-        self.inv1 = ["Sword"]
-        self.active1 = -1
-        #long range weapons
-        self.inv2 = ["Gun"]
-        self.active2 = -1
-        #long range weapons
-        self.inv3 = ["Wind", "Build"]
-        self.active3 = -1
 
     def update(self, **kwargs):
         self.rect.x = self.irect.x - scroll[0]
@@ -690,30 +683,164 @@ def gameloop(loadgame=0):
     def graph(joystick):
         global graphcooldown
         screen.blit(bg, (0, 0))
-        if joystick.get_button(3):
-            player.invactive = -1
         if graphcooldown == 0:
-            if joystick.get_axis(0) > 0:
-                if player.invactive < len(player.inv) - 1:
+            if round(joystick.get_axis(0)) > 0:
+                if player.invactive < len(player.inv) - 1 and ((player.invactive%8) != 7 or player.invactive == -1):
                     player.invactive += 1
                     graphcooldown = 12
-            if joystick.get_axis(0) < 0:
-                if player.invactive > 0:
+            elif round(joystick.get_axis(0)) < 0:
+                if player.invactive > 0 and (player.invactive%8) != 0:
                     player.invactive -= 1
+                    graphcooldown = 12
+            if round(joystick.get_axis(1)) > 0:
+                if player.invactive < (len(player.inv)//8)*8:
+                    player.invactive += 8
+                    if player.invactive > len(player.inv) - 1:
+                        player.invactive = len(player.inv) - 1
+                    graphcooldown = 12
+            elif round(joystick.get_axis(1)) < 0:
+                if player.invactive > 7:
+                    player.invactive -= 8
                     graphcooldown = 12
         else:
             graphcooldown -= 1
+
         for i in range(len(player.inv)):
-            pygame.draw.rect(screen, (140, 100, 100), (50 + 120*i, 50, 100, 60))
+            pygame.draw.rect(screen, (100, 50, 50), (30 + 120*(i%8), 50 + 70*(i//8), 110, 60))
             if player.invactive == i:
-                write(text=player.inv[i], position=(60 + 120*i, 60), fontsize=30, color=(255, 255, 255))
+                if not player.inv[i][1]:
+                    write(text=player.inv[i][0], position=(40 + 120*(i%8), 60 + 70*(i//8)), fontsize=26, color=(255, 120, 120))
+                else:
+                    write(text=player.inv[i][0], position=(40 + 120*(i%8), 60 + 70*(i//8)), fontsize=26, color=(255, 255, 255))
+            elif not player.inv[i][1]:
+                write(text=player.inv[i][0], position=(40 + 120*(i%8), 60 + 70*(i//8)), fontsize=25, color=(255, 0, 0))
             else:
-                write(text=player.inv[i], position=(60 + 120*i, 60), fontsize=30)
+                write(text=player.inv[i][0], position=(40 + 120*(i%8), 60 + 70*(i//8)), fontsize=25)
+        
+        if player.invactive != -1:
+            if joystick.get_button(0) and graphcooldown == 0:
+                for conn in range(len(player.connections)):
+                    if player.connections[conn][0] == None:
+                        if player.inv[player.invactive][1]:
+                            player.connections[conn][0] = player.inv[player.invactive][0]
+                            player.inv[player.invactive][1] = False
+                            joystick.rumble(0.8, 0.8, 120)
+                            graphcooldown = 12
+                            break
+                    elif player.connections[conn][0] == player.inv[player.invactive][0]:
+                        player.connections[conn][0] = None
+                        for i in range(len(player.inv)):
+                            try:
+                                if player.inv[i][0] == player.connections[conn][1][0] or player.inv[i][0] == player.connections[conn][1][1]:
+                                    player.inv[i][1] = True
+                            except IndexError:
+                                pass
+                        player.connections[conn][1] = []
+                        player.inv[player.invactive][1] = True
+                        joystick.rumble(0.5, 0.5, 60)
+                        graphcooldown = 15
+                        break
+
+            rj = round(joystick.get_axis(2)), round(joystick.get_axis(3))
+            if graphcooldown == 0:
+                if rj[0] < 0:
+                    if player.connections[0][0] != None:
+                        if player.inv[player.invactive][1]:
+                            if not player.inv[player.invactive][0] in player.connections[0][1] and player.inv[player.invactive][0] != player.connections[0][0] and len(player.connections[0][1]) < 2:
+                                player.connections[0][1].append(player.inv[player.invactive][0])
+                                player.inv[player.invactive][1] = False
+                                graphcooldown = 12
+                        else:
+                            if player.inv[player.invactive][0] in player.connections[0][1]:
+                                player.connections[0][1].remove(player.inv[player.invactive][0])
+                                player.inv[player.invactive][1] = True
+                                graphcooldown = 12
+                elif rj[0] > 0:
+                    if player.connections[1][0] != None:
+                        if player.inv[player.invactive][1]:
+                            if not player.inv[player.invactive][0] in player.connections[1][1] and player.inv[player.invactive][0] != player.connections[1][0] and len(player.connections[1][1]) < 2:
+                                player.connections[1][1].append(player.inv[player.invactive][0])
+                                player.inv[player.invactive][1] = False
+                                graphcooldown = 12
+                        else:
+                            if player.inv[player.invactive][0] in player.connections[1][1]:
+                                player.connections[1][1].remove(player.inv[player.invactive][0])
+                                player.inv[player.invactive][1] = True
+                                graphcooldown = 12
+                if rj[1] < 0:
+                    if player.connections[2][0] != None:
+                        if player.inv[player.invactive][1]:
+                            if not player.inv[player.invactive][0] in player.connections[2][1] and player.inv[player.invactive][0] != player.connections[2][0] and len(player.connections[2][1]) < 2:
+                                player.connections[2][1].append(player.inv[player.invactive][0])
+                                player.inv[player.invactive][1] = False
+                                graphcooldown = 12
+                        else:
+                            if player.inv[player.invactive][0] in player.connections[2][1]:
+                                player.connections[2][1].remove(player.inv[player.invactive][0])
+                                player.inv[player.invactive][1] = True
+                                graphcooldown = 12
+                elif rj[1] > 0:
+                    if player.connections[3][0] != None:
+                        if player.inv[player.invactive][1]:
+                            if not player.inv[player.invactive][0] in player.connections[3][1] and player.inv[player.invactive][0] != player.connections[3][0] and len(player.connections[3][1]) < 2:
+                                player.connections[3][1].append(player.inv[player.invactive][0])
+                                player.inv[player.invactive][1] = False
+                                graphcooldown = 12
+                        else:
+                            if player.inv[player.invactive][0] in player.connections[3][1]:
+                                player.connections[3][1].remove(player.inv[player.invactive][0])
+                                player.inv[player.invactive][1] = True
+                                graphcooldown = 12
             
-        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 100, display_rect.centery - 50, 50, 50), 1)
-        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx + 50, display_rect.centery - 50, 50, 50), 1)
-        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 25, display_rect.centery - 125, 50, 50), 1)
-        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 25, display_rect.centery + 30, 50, 50), 1)
+        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 100, display_rect.centery + 50, 50, 50), 1)
+        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx + 50, display_rect.centery + 50, 50, 50), 1)
+        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 25, display_rect.centery - 25, 50, 50), 1)
+        pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 25, display_rect.centery + 130, 50, 50), 1)
+
+        if player.connections[0][0] != None:
+            write(text=player.connections[0][0], position=(display_rect.centerx - 100, display_rect.centery + 50), fontsize=30, color=(255, 255, 255))
+            
+            pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 200, display_rect.centery, 50, 50), 1)
+            pygame.draw.line(screen, (255, 255, 255), (display_rect.centerx - 150, display_rect.centery + 25), (display_rect.centerx - 100, display_rect.centery + 75), 1)
+
+            pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 200, display_rect.centery + 100, 50, 50), 1)
+            pygame.draw.line(screen, (255, 255, 255), (display_rect.centerx - 150, display_rect.centery + 125), (display_rect.centerx - 100, display_rect.centery  + 75), 1)
+
+            for conn in range(len(player.connections[0][1])):
+                write(text=player.connections[0][1][conn], position=(display_rect.centerx - 200, (display_rect.centery + 10) + conn*100), fontsize=30, color=(255, 255, 255))
+        if player.connections[1][0] != None:
+            write(text=player.connections[1][0], position=(display_rect.centerx + 50, display_rect.centery + 50), fontsize=30, color=(255, 255, 255))
+
+            pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx + 150, display_rect.centery, 50, 50), 1)
+            pygame.draw.line(screen, (255, 255, 255), (display_rect.centerx + 150, display_rect.centery + 25), (display_rect.centerx + 100, display_rect.centery + 75), 1)
+
+            pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx + 150, display_rect.centery + 100, 50, 50), 1)
+            pygame.draw.line(screen, (255, 255, 255), (display_rect.centerx + 150, display_rect.centery + 125), (display_rect.centerx + 100, display_rect.centery + 75), 1)
+
+            for conn in range(len(player.connections[1][1])):
+                write(text=player.connections[1][1][conn], position=(display_rect.centerx + 150, (display_rect.centery + 10) + conn*100), fontsize=30, color=(255, 255, 255))
+        if player.connections[2][0] != None:
+            write(text=player.connections[2][0], position=(display_rect.centerx - 25, display_rect.centery - 25), fontsize=30, color=(255, 255, 255))
+
+            pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 100, display_rect.centery - 100, 50, 50), 1)
+            pygame.draw.line(screen, (255, 255, 255), (display_rect.centerx - 75, display_rect.centery - 50), (display_rect.centerx - 25, display_rect.centery), 1)
+
+            pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx + 50, display_rect.centery - 100, 50, 50), 1)
+            pygame.draw.line(screen, (255, 255, 255), (display_rect.centerx + 75, display_rect.centery - 50), (display_rect.centerx + 25, display_rect.centery), 1)
+
+            for conn in range(len(player.connections[2][1])):
+                write(text=player.connections[2][1][conn], position=((display_rect.centerx - 100) + conn*150, display_rect.centery - 90), fontsize=30, color=(255, 255, 255))
+        if player.connections[3][0] != None:
+            write(text=player.connections[3][0], position=(display_rect.centerx - 25, display_rect.centery + 130), fontsize=30, color=(255, 255, 255))
+
+            pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx - 100, display_rect.centery + 200, 50, 50), 1)
+            pygame.draw.line(screen, (255, 255, 255), (display_rect.centerx - 75, display_rect.centery + 200), (display_rect.centerx - 25, display_rect.centery + 150), 1)
+
+            pygame.draw.rect(screen, (255, 255, 255), (display_rect.centerx + 50, display_rect.centery + 200, 50, 50), 1)
+            pygame.draw.line(screen, (255, 255, 255), (display_rect.centerx + 75, display_rect.centery + 200), (display_rect.centerx + 25, display_rect.centery + 150), 1)
+
+            for conn in range(len(player.connections[3][1])):
+                write(text=player.connections[3][1][conn], position=((display_rect.centerx - 100) + conn*150, display_rect.centery + 210), fontsize=30, color=(255, 255, 255))
 
     def status():
         screen.blit(bg, (0, 0))
@@ -762,11 +889,15 @@ def gameloop(loadgame=0):
         #also show stamina bar and status effects
     #endregion
 
+    x_seek, y_seek = 0, 0
+
     while running:                                                          ### GAMELOOP START ###
         if player.detectablebyenemies > 0:
             player.detectablebyenemies -= 0.2
-        scroll[0] += (player.irect.x - scroll[0] - (500-player.irect.w/2))
-        scroll[1] += (player.irect.y - scroll[1] - (400-player.irect.h/2))
+
+        scroll[0] += ((player.irect.x - scroll[0] - (500-player.irect.w/2)) + (x_seek))
+        scroll[1] += ((player.irect.y - scroll[1] - (400-player.irect.h/2)) + (y_seek))
+
         display_rect.x, display_rect.y = scroll[0], scroll[1]
         pygame.display.update(); clock.tick(60)
         for ev in pygame.event.get():
@@ -777,10 +908,10 @@ def gameloop(loadgame=0):
             if ev.type == pygame.KEYDOWN:
                 if ev.key == pygame.K_a or ev.key == pygame.K_s or ev.key == pygame.K_d:
                     pygame.mouse.set_pos(500, 650)
-            if ev.type == pygame.JOYBUTTONDOWN:
-                if ev.button == 1:
-                    joystick = joysticks[ev.instance_id]
-                    joystick.rumble(0, 0.5, 150)
+            # if ev.type == pygame.JOYBUTTONDOWN:
+            #     if ev.button == 1:
+            #         joystick = joysticks[ev.instance_id]
+            #         joystick.rumble(0, 0.5, 150)
             if ev.type == pygame.JOYDEVICEADDED:
                 controller_connected = True
                 joy = pygame.joystick.Joystick(ev.device_index)
@@ -811,6 +942,10 @@ def gameloop(loadgame=0):
                 else:
                     in_menu = False
                     bg.set_alpha(0)
+
+                x_seek = round(mx - player.irect.center[0])
+                y_seek = round(my - player.irect.center[1])
+
                 player.sprint = False
                 if keys_pressed[K_LSHIFT] and player.stamina > 0 and not player.poisoning:
                     player.sprint = True
@@ -877,22 +1012,22 @@ def gameloop(loadgame=0):
                     if joystick.get_button(7):
                         reset()
                         running = False
+
+                    if not in_menu and player.movement == [0, 0]:
+                        x_seek = round(joystick.get_axis(2), 1)*120
+                        y_seek = round(joystick.get_axis(3), 1)*120
+                    else:
+                        x_seek = 0
+                        y_seek = 0
+
                     if not in_menu:
-                        xaxis = joystick.get_axis(0)
+                        xaxis = round(joystick.get_axis(0))
                         player.movement[0] = xaxis*2
-                        if xaxis == 0:
-                            player.movement[0] = 0
-                        yaxis = joystick.get_axis(1)
+                        yaxis = round(joystick.get_axis(1))
                         player.movement[1] = yaxis*2
-                        if yaxis == -3.0517578125e-05:
-                            yaxis = 0
-                        if yaxis == 0:
-                            player.movement[1] = 0
-                        if xaxis == 0 and yaxis == 0:
-                            player.movement = [0, 0]
                         
                     player.sprint = False
-                    joy_btn_sprint = joystick.get_button(1)
+                    joy_btn_sprint = joystick.get_button(5)
                     if joy_btn_sprint and player.stamina > 0 and not player.poisoning:
                         player.sprint = True
                         player.stamina -= 1
@@ -901,21 +1036,21 @@ def gameloop(loadgame=0):
                         player.movement[1] *= 4
                     
                     joy_btn_menu1 = joystick.get_button(4)
+                    joy_btn_status = joystick.get_axis(4)
                     if joy_btn_menu1:
                         in_menu = True
                         graph(joystick)
-                    # joy_btn_menu2 = joystick.get_button(5)
-                    # if joy_btn_menu2:
-                    #     in_menu = True
-                    #     menu2joy(joystick)
-                    # joy_btn_menu3 = joystick.get_axis(5)
-                    # if joy_btn_menu3 > 0:
-                    #     in_menu = True
-                    #     menu3joy(joystick)
-                    joy_btn_status = joystick.get_axis(4)
-                    if joy_btn_status > 0:
+                    elif joy_btn_status > 0:
                         in_menu = True
                         status()
+                    else:
+                        in_menu = False
+                    
+                    if in_menu:
+                        player.movement = [0, 0]
+                    
+                    if not joy_btn_menu1:
+                        player.invactive = -1
 
         #region
         pcollside = {"front": False, "back": False, "left": False, "right": False}
