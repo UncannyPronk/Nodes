@@ -256,6 +256,8 @@ class Character(pygame.sprite.Sprite):
         self.sprite = self.Sprite(self)
 
     def update(self, **kwargs):
+        self.irect.x += self.movement[0]
+        self.irect.y += self.movement[1]
         self.rect.x = self.irect.x - scroll[0]
         self.rect.y = self.irect.y - scroll[1]
     
@@ -506,10 +508,11 @@ class Player(pygame.sprite.Sprite):
         self.image.fill((255, 0, 0))
         self.rect = self.image.get_rect()
         self.irect = self.rect
-        self.detectrect = Rect(self.rect.x - 8, self.rect.y - 8, self.rect.width + 16, self.rect.height + 16)
+        self.detectrect = Rect(self.rect.x - 12, self.rect.y - 12, self.rect.width + 24, self.rect.height + 24)
+        self.attackrect = Rect(self.rect.x - 32, self.rect.y - 32, self.rect.width + 64, self.rect.height + 64)
         self.movement = [0, 0]
         self.hp = 100
-        self.detectablebyenemies = 0
+        self.detectablebyenemies = 1
         self.stamina = 300
         self.poisoning = False
         self.paralysis = False
@@ -528,6 +531,8 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = self.irect.y - scroll[1]
         self.detectrect.x = self.rect.x - 8
         self.detectrect.y = self.rect.y - 8
+        self.attackrect.x = self.rect.x - 32
+        self.attackrect.y = self.rect.y - 32
         if self.movement == [0, 0] and self.stamina < 300:
             self.stamina += 1
         
@@ -937,9 +942,6 @@ def gameloop(loadgame=0):
     guide1 = None
 
     while running:                                                          ### GAMELOOP START ###
-        if player.detectablebyenemies > 0:
-            player.detectablebyenemies -= 0.2
-
         scroll[0] += ((player.irect.x - scroll[0] - (500-player.irect.w/2)) + (x_seek))
         scroll[1] += ((player.irect.y - scroll[1] - (400-player.irect.h/2)) + (y_seek))
 
@@ -1010,6 +1012,7 @@ def gameloop(loadgame=0):
 
         # Level 0, Phase 2
         # Collection Phase
+        #   Make Rt trigger button allow the user to crouch and sneak
     
         screen.fill((0, 0, 0))
         blit(SpriteGroup)
@@ -1041,7 +1044,7 @@ def gameloop(loadgame=0):
                 if keys_pressed[K_LSHIFT] and player.stamina > 0 and not player.poisoning:
                     player.sprint = True
                     player.stamina -= 1
-                    player.detectablebyenemies = 100
+                    # player.detectablebyenemies = 100
 
                 if not player.irect.collidepoint(mx, my) and not in_menu:
                     if player.irect.right < mx:
@@ -1140,7 +1143,7 @@ def gameloop(loadgame=0):
                     if joy_btn_sprint and player.stamina > 0 and not player.poisoning:
                         player.sprint = True
                         player.stamina -= 1
-                        player.detectablebyenemies = 100
+                        # player.detectablebyenemies = 100
                         player.movement[0] *= 4
                         player.movement[1] *= 4
                     
@@ -1165,7 +1168,10 @@ def gameloop(loadgame=0):
         pcollside = {"front": False, "back": False, "left": False, "right": False}
         player.irect.x += player.movement[0]
         #region[rgb(72, 0, 0)]
-        ecoll = pygame.sprite.spritecollide(player, EnemyGroup, False)
+        ecoll = []
+        for coll in EnemyGroup:
+            if coll.rect.colliderect(player.attackrect):
+                ecoll.append(coll)
         for coll in ecoll:
             if coll.type == "npc":
                 if coll.hostile:
@@ -1173,7 +1179,7 @@ def gameloop(loadgame=0):
                         if player.connections[conn][0] == "Blade":
                             if controller_connected:
                                 if joystick.get_button(conn):
-                                    coll.hp -= 1
+                                    coll.hp -= 5
                                     s_entity = coll
                                     break
                     else:
@@ -1224,7 +1230,10 @@ def gameloop(loadgame=0):
 
         player.irect.y += player.movement[1]
         #region[rgb(72, 0, 0)]
-        ecoll = pygame.sprite.spritecollide(player, EnemyGroup, False)
+        ecoll = []
+        for coll in EnemyGroup:
+            if coll.rect.colliderect(player.attackrect):
+                ecoll.append(coll)
         for coll in ecoll:
             if coll.type == "npc":
                 if coll.hostile:
@@ -1232,7 +1241,7 @@ def gameloop(loadgame=0):
                         if player.connections[conn][0] == "Blade":
                             if controller_connected:
                                 if joystick.get_button(conn):
-                                    coll.hp -= 1
+                                    coll.hp -= 5
                                     s_entity = coll
                                     break
                     else:
@@ -1283,8 +1292,29 @@ def gameloop(loadgame=0):
             speech_engine(player, s_entity, dialogue_list)
             dialogue_end = False
 
+        if player.detectablebyenemies > 0:
+            for enemy in EnemyGroup:
+                if enemy.rect.colliderect(display_rect):
+                    if player.rect.x > enemy.rect.right:
+                        enemy.movement[0] = 1
+                    if player.rect.right < enemy.rect.x:
+                        enemy.movement[0] = -1
+                    if player.rect.y > enemy.rect.bottom:
+                        enemy.movement[1] = 1
+                    if player.rect.bottom < enemy.rect.y:
+                        enemy.movement[1] = -1
+
+                for enemy2 in EnemyGroup:
+                    if enemy != enemy2:
+                        if enemy.rect.colliderect(enemy2.rect):
+                            enemy.movement[0] = -enemy.movement[0]
+                            enemy.movement[1] = -enemy.movement[1]
+                            enemy2.movement[0] = -enemy2.movement[0]
+                            enemy2.movement[1] = -enemy2.movement[1]
+
         #endregion
-        if player.hp == 0:
+        if player.hp <= 0:
+            # player.hp = 1
             running = False
             break
 
