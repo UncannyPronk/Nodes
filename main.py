@@ -1190,6 +1190,8 @@ def gameloop(loadgame=0):
                         # player.poisoning = True
                         # player.burning = True
                     if coll.hp <= 0:
+                        if len(EnemyGroup) == 1:
+                            phase += 1
                         SpriteGroup.remove(coll.sprite)
                         EnemyGroup.remove(coll)
                         break
@@ -1252,6 +1254,8 @@ def gameloop(loadgame=0):
                         # player.poisoning = True
                         # player.burning = True
                     if coll.hp <= 0:
+                        if len(EnemyGroup) == 1:
+                            phase += 1
                         SpriteGroup.remove(coll.sprite)
                         EnemyGroup.remove(coll)
                         break
@@ -1315,6 +1319,7 @@ def gameloop(loadgame=0):
         #endregion
         if player.hp <= 0:
             # player.hp = 1
+            reset()
             running = False
             break
 
